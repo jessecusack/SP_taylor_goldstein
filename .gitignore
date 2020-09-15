@@ -1,6 +1,7 @@
 raw_data/*.mat
 raw_data/*.nc
 proc_data/*.mat
+proc_data/*.nc
 figures/*.pdf
 figures/*.png
 figures/*.jpg
