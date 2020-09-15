@@ -1,8 +1,9 @@
 Installation instructions
 -------------------------
 
-1. Install miniconda3 (https://docs.conda.io/en/latest/miniconda.html) to manage python. 
-1. Contact me for the raw data, which should be placed in the raw_data directory.
+1. Install miniconda3 (https://docs.conda.io/en/latest/miniconda.html) to manage python.
+1. Download this git repository. 
+1. Contact me for the raw data, which should be placed in the raw_data directory within the repository.
 1. Create and install the conda environment as follows:
 
 First run the following within the base directory of this repository,
