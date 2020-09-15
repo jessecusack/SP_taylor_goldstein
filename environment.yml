@@ -1,0 +1,23 @@
+name: sp-tg
+channels:
+- conda-forge
+- defaults
+dependencies:
+- python=3
+- cartopy
+- cmocean
+- gsw
+- ipykernel
+- ipython
+- jupyter
+- matplotlib
+- netcdf4
+- numpy
+- oceans
+- pip
+- pyqt
+- scipy
+- seawater
+- xarray
+- utm
+- munch

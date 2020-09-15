@@ -1,0 +1,14 @@
+raw_data/*.mat
+raw_data/*.nc
+proc_data/*.mat
+figures/*.pdf
+figures/*.png
+figures/*.jpg
+
+.DS_Store
+
+.ipynb_checkpoints
+
+__pycache__
+
+*.pyc
