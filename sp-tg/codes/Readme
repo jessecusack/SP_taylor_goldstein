@@ -1,0 +1,8 @@
+TG_old TG_new files contain the old and new versions of Matlab tools to solve the viscous T-G equation. The new version is supposed to be faster and more accurate. 
+
+See references: 
+Smyth, W.D., J.N. Moum and J.D. Nash, 2011: “Narrowband, high-frequency oscillations at the equator. Part II: Properties of shear instabilities”, J. Phys. Oceanogr.41, 412-428.
+
+Lian, Q. , Z. Liu, W.D. Smyth 2019: “Numerical computation of instabilities and internal waves from in situ measurements via the viscous Taylor-Goldstein problem”, J Atm. Oc. Tech. (in press)
+
+Matlab tool website: http://blogs.oregonstate.edu/salty/matlab-tools-to-solve-the-viscous-taylor-goldstein-equation-for-both-instabilities-and-waves/

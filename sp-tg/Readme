@@ -1,0 +1,11 @@
+Tools    - Matlab codes to solve the T-G equation by Bill Smyth.
+
+Data     - time-mean profiles or synoptic profiles
+
+Codes    - main programs:          TG_SI_mean_ex?.m ()
+	   main subroutine:                         ()
+	   auxiliary subroutines:  
+
+Results  - 
+
+Analysis - 
