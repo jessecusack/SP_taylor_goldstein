@@ -102,6 +102,7 @@ for j, (file, TY) in enumerate(zip(towyo_files, TOWYOs)):
     TY["b"] = -TY["g"] * (TY["sig4"] - sig4b) / sig4b
     TY["sig4m"] = np.nanmean(TY["sig4"])
     TY["sig4_sorted"] = utils.nansort(TY["sig4"], axis=0)
+    TY["b_sorted"] = -TY["g"] * (TY["sig4_sorted"] - sig4b) / sig4b
     TY["N2"], TY["P_mid"] = gsw.Nsquared(
         TY["SA"], TY["CT"], TY["P"], np.nanmean(TY["lat"], axis=0)
     )
