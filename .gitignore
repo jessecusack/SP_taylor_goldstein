@@ -13,3 +13,5 @@ figures/*.jpg
 __pycache__
 
 *.pyc
+
+*.m~
