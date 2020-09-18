@@ -20,7 +20,7 @@
 % KFGM & GR - wave number & fastest growth rate
 %
 % CALLS:
-% FGM.m (change lines 45-50, 64-69, and 119-124 to process the profiles)
+% FGM_mean_ex1.m (change lines 45-50, 64-69, and 119-124 to process the profiles)
 % e.g., to sort the buoyancy profile, call DP_1.m; to artifically exclude
 % overturns, BBLs, and smooth the data, call DP_2.m; to fill upper layer 
 % flow reversals with stagnant and uniform fluid, call DP_3.m: 
@@ -34,7 +34,7 @@
 % Smyth, W.D., J.N. Moum and J.D. Nash, 2011: ?Narrowband, high-frequency oscillations at the equator. Part II: Properties of shear instabilities", J. Phys. Oceanogr. 41, 412-428. 
 % S.Tan, Scripps, 2019/04/15
 % the example in this script is tested on time-mean mporing profiles, 
-% only use DP.m to process data
+% only use DP.m and DP_0.m to process data
 % assume rigid lid, no background viscosity, diffusivity
 % S.Tan, IOCAS, 2019/09/06
 
@@ -113,7 +113,7 @@ for profile=1:length(s)
     end
 
     % scan the (k,l) plane and pick out FGM    
-    [v,vz,vzz,b,n2,Ri_r,zz,II(profile),GR(profile),CR(profile),CI(profile),WFGM,KFGM(profile,:),CL_FGM,II0,GR0,CR0,CI0,W0]=FGM(data,dz,D1,D2,HOWTO,BOT,K,L,nu,kap,iBC1,iBCN,k_thred,bs);
+    [v,vz,vzz,b,n2,Ri_r,zz,II(profile),GR(profile),CR(profile),CI(profile),WFGM,KFGM(profile,:),CL_FGM,II0,GR0,CR0,CI0,W0]=FGM_mean_ex1(data,dz,D1,D2,HOWTO,BOT,K,L,nu,kap,iBC1,iBCN,k_thred,bs);
     CL(profile,1:length(CL_FGM))=CL_FGM;
     W(:,profile)=interp1(zz,WFGM,zw);V(:,profile)=interp1(zz,v,zw);Vz(:,profile)=interp1(zz,vz,zw);Vzz(:,profile)=interp1(zz,vzz,zw);
     B(:,profile)=interp1(zz,b,zw);N2(:,profile)=interp1(zz,n2,zw);Ri(:,profile)=interp1(zz,Ri_r,zw);
@@ -138,4 +138,4 @@ for profile=1:length(s)
 
 end
 site = s;
-save TG_SI_mean_ex1.mat II GR CR CI CL KFGM K L zw W V Vz Vzz B N2 Ri site
+save TG_SI_mean_ex1.mat II GR CR CI CL KFGM K L zw W V Vz Vzz B N2 Ri site botz
