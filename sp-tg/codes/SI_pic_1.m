@@ -35,10 +35,10 @@ if length(K)>1&&length(L)>1
     colormap(COLOR);
     bar=colorbar;
     hold on
-    plot(K_max(1),K_max(2),'rp','markersize',ms,'linewidth',lw);
-    text(K(1),L(1),strcat('Fastest growing wave'),'fontsize',fs,'color','k');
-    text(K(1),(median(L)+L(1))/2,strcat('Wave length=',num2str(2*pi/sqrt(K_max(1)^2+K_max(2)^2)),' m'),'fontsize',fs,'color','k');
-    text(K(1),median(L),strcat('Growth rate= 2\pi/',num2str(2*pi/GR_max/3600),'hours'),'fontsize',fs,'color','k');
+    plot(K_max(1),K_max(2),'kp','markersize',ms,'linewidth',lw);
+    text(K(1),L(end)/5-L(1),strcat('Fastest growing wave'),'fontsize',fs,'color','k');
+    text(K(1),L(end)/3-L(1),strcat('Wave length=',num2str(2*pi/sqrt(K_max(1)^2+K_max(2)^2)),' m'),'fontsize',fs,'color','k');
+    text(K(1),2*L(end)/3-L(1),strcat('Growth rate= 2\pi/',num2str(2*pi/GR_max/3600),'hours'),'fontsize',fs,'color','k');
     grid on
 else
     subplot(211)
@@ -82,9 +82,9 @@ end
 
 % pic of Howard's semicircle theorem
 subplot(212)
-plot(CR,CI,'*')
+plot(CR,CI,'k*')
 hold on
-plot(CR_max,CI_max,'r*')
+plot(CR_max,CI_max,'rp','markersize',ms,'linewidth',lw);
 hold on
 th = 0:pi/50:pi;
 Umax=max(v);
