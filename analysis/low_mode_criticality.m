@@ -3,22 +3,24 @@
 
 % PARAMS
 % pick and arbitrary profile to start with
-pfl = 600;
-idx = pfl + 1;
+pfl = 201;
+idx = pfl;
 % density of interface top
 sig4i = 1045.93;  % double check this matches the choice in other analysis.
 % Turbulent diffusivity (if constant)
 Kv0 = 1e-2;
 % To smooth profiles or not? Maybe diffusivity takes care of this?
-dosmoothing = true;
+dosmoothing = false;
 % Smoothing amounts
 bspan = 0.1;
 vspan = 0.3;
 % wavenumber for Taylor Goldstein
-L = 5000;
+L = 100000;
 k = 2*pi/L;
 % Compute all modes (imode=1 gives fastest-growing unstable mode)
 imode = 0;
+% Skip some data to increase speed
+step = 5;
 % END PARAMS
 
 % LOAD DATA
@@ -47,8 +49,15 @@ sig4 = sig4(use)';
 b = b(use)';
 z = z_(use);
 
+% cut out some data for speed
+u = u(1:step:end);
+v = v(1:step:end);
+sig4 = sig4(1:step:end);
+b = b(1:step:end);
+z = z(1:step:end);
+
 % rotate the velocity into the depth mean direction
-dz = 1;  % this is the bin size of each data point.
+dz = 1*step;  % this is the bin size of each data point.
 U = sum(u*dz)/sum(dz*use);
 V = sum(v*dz)/sum(dz*use);
 % need the - and 2*pi because atan2 returns values in the range [-pi, pi]
@@ -90,7 +99,7 @@ FG = vTG_FGprep(z, us, 0*us, bz, Av, Ah, Kv, Kh);
 % read above as returning
 % [frequency, w eigenvector, b eigenvector]
 
-% phase speed (I don't understand why this minus is there)
+% phase speed
 cp = -imag(om)/k;
 % sort by phase speed
 [cp, ind] = sort(cp,'ascend');
@@ -114,14 +123,14 @@ hold on
 plot(lon, lat, 'k.')
 plot(lon(idx), lat(idx), 'ro')
 
-figure
-plot(bs, z)
-
-figure
-plot(bz, z)
-
-figure
-plot(us, z)
+% figure
+% plot(bs, z)
+% 
+% figure
+% plot(bz, z)
+% 
+% figure
+% plot(us, z)
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
