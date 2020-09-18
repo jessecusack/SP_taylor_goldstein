@@ -1,34 +1,22 @@
-Installation instructions
+Code instructions
 -------------------------
 
-1. Install miniconda3 (https://docs.conda.io/en/latest/miniconda.html) to manage python.
-1. Download this git repository. 
-1. Contact me for the raw data, which should be placed in the raw_data directory within the repository.
-1. Create and install the conda environment as follows:
+`tools`    - Matlab codes to solve the T-G equation by Bill Smyth.
 
-First run the following within the base directory of this repository,
+`data`     - time-mean profiles or synoptic profiles
 
-```
-conda env create -f environment.yml
-```
+`codes`    - main programs:          TG_SI_mean_ex?.m FGM.m (seek for the FGMs using time-mean mooring profiles)
+	        main subroutine:        DP.m, DP_0.m (basic data processing)   DP_1.m, DP_2.m, DP_3.m (advanced data processing)
+	        auxiliary subroutines:  DP_pic.m (plot profiles)  SI_pic_1.m, SI_pic_2.m (plot FGM-relavent stuff)
 
-which creates a new conda environment called `sp-tg`.
+`results`  - directory store results
 
-Then install the kernel for the environment so that it can be used with jupyter lab or jupyter notebooks.
+`analysis` - directory to make analysis
 
-```
-conda activate sp-tg
-python -m ipykernel install --user --name sp-tg --display-name sp-tg
-```
+T-G analysis seeking for FGMs (fastest growing modes - unstable)
+-------------------------
+Install MATLAB or Octave first (python codes are on the way), change `mdirec` in line 47 to the directory in your pc, then run the example script `TG_SI_mean_ex1.m` in the `./codes/` directory. 
 
-With the kernel activated and the data downloaded, you can then run the reprocessing scripts contained the `reprocessing` directory, e.g.
-
-```
-cd reprocessing
-python reprocess_MP_data.py
-python reprocess_TOWYO_data.py
-``` 
-     
-which will create a lot of files in the `proc_data` directory. 
-
-After following the above instructions, the analysis code (contained in `analysis`) should then run successfully. Just don't forget to either activate the conda environment first (`conda activate sp-tg`) or set up notebooks/lab that uses that environment. 
+T-G analysis seeking for LWMs (long wave modes - idealy stable)
+-------------------------
+on the way...
