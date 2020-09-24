@@ -18,7 +18,10 @@ function [v,vz,vzz,b,n2,Ri,zz]=DP_0(v,vz,vzz,b,n2,Ri,zz)
     % get rid of N2<0 !!!!!!!!! (this is a MUST, or GR increases with k, convective instability)
     n2(find(n2<0))=nan;
     l=find(~isnan(n2));
-    n2=interp1(zz(l),n2(l),zz,'pchip');
+    n2=interp1(zz(l),n2(l),zz,'pchip',999);
+    l=find(n2==999);
+    v(l)=[];vz(l)=[];vzz(l)=[];b(l)=[];n2(l)=[];Ri(l)=[];zz(l)=[];
+        
     b=cumtrapz(zz,n2)+b(1);% Integrate to get b
     n2=ddz(zz)*b;
     Ri=n2./(vz).^2;

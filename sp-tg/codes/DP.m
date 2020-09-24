@@ -36,12 +36,15 @@ function [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz,D1,D2,K,L,HOWTO,BOT)
     else
         u=nan(size(sigma4));
     end
-
-    % Convert density to buoyancy.
-    g=9.81;
-    l=find(~isnan(sigma4));
-    b(l)=-g*(sigma4(l)-nanmean(sigma4))/nanmean(sigma4);
-
+    if isfield(data, 'b')
+        b=data.b;
+    else
+        % Convert density to buoyancy.
+        g=9.81;
+        l=find(~isnan(sigma4));
+        b(l)=-g*(sigma4(l)-nanmean(sigma4))/nanmean(sigma4);
+    end
+    
     % z be negative
     if mean(z)>0
         z = -z;
@@ -100,10 +103,25 @@ function [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz,D1,D2,K,L,HOWTO,BOT)
     end
     
     % near bottom (especially BOT==2): extrapolate V and use uniform B
-    l=find(isnan(V(1:round(length(V)/4))));ll=find(~isnan(V));
+%     l=find(isnan(V(1:round(length(find(~isnan(V)))/4))));ll=find(~isnan(V));
+%     V(l)=interp1(zz(ll),V(ll),zz(l),'linear','extrap');
+%     l=find(isnan(B(1:round(length(find(~isnan(B)))/4))));
+%     B(l)=B(ll(1));
+    % identify near bottom voids
+    l=find(isnan(V));dl=find(diff(l)>1);
+    if ~isempty(dl)
+        ll=dl(1);l=l(1:ll);ll=find(~isnan(V));
+    else
+        l=find(isnan(V(1:round(length(find(~isnan(V)))/4))));ll=find(~isnan(V));
+    end
     V(l)=interp1(zz(ll),V(ll),zz(l),'linear','extrap');
-    l=find(isnan(B(1:round(length(B)/4))));ll=find(~isnan(B));
-    B(l)=B(ll(1));
+    l=find(isnan(B));dl=find(diff(l)>1);
+    if ~isempty(dl)
+        ll=dl(1);l=l(1:ll);ll=find(~isnan(B));
+    else
+        l=find(isnan(B(1:round(length(find(~isnan(B)))/4))));
+    end
+    B(l)=B(ll(1));    
 
     % Only keep data above seabed (last CTD point) D1 to D2
     v=V;u=U;b=B;
@@ -122,7 +140,7 @@ function [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz,D1,D2,K,L,HOWTO,BOT)
 
     % roated speed
     if isfield(data, 'u')
-        spd=(K.*u+L.*v)./sqrt(K^2+L^2);
+        spd=(K.*u+L.*v)./sqrt(K.^2+L.^2);
     else
         spd=v;
     end
