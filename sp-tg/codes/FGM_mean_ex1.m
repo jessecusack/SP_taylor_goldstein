@@ -6,10 +6,20 @@
 % HOWTO: 1- linear interp; 2-segment mean
 % BOT: data profile starts from 1-DEEPEST DATA POINT 2- REAL SEA BOTTOM
 % K_init, L_init: initial guesses of wave numbers in x and y directions
-% nu, kap: background viscosity, diffusivity
-% iBC1, iBCN: boundary condition
 % k_thred: theredhold for k ; 1- 2.*pi./7/(bs/2); 2- do not apply
 % bs: bin-size of the measurments (resolution of data)
+% tool: 1- the Finite difference method (FD) 2- the Fourier-Galerkin method (FG)
+% iBC1, iBCN: boundary condition
+%   FD - 
+%   (1) velocity: 1=rigid (2nd order: w_{hat}=0; 4th order: w_{hat}=0, w_{hat}_z=0), 0=frictionless (2nd order: w_{hat}_z=kw_{hat}; 4th order: w_{hat}=0, w_{hat}_zz=0)
+%   (2) buoyancy: 1=insulating (b_{hat}_z=0 suggesting -\kappa\frac{\pb}{\pz}=0), 0=fixed-buoyancy (b_{hat}=0)                             
+%   FG -
+%   satisfies impermeable, frictionless, constant-buoyancy boundaries (w_{hat}=0,  w_{hat}_zz=0, b_{hat}=0)
+% background viscosity, diffusivity
+%    FD - 
+%    nu, kap (constant or (n,1) columns)
+%    FG - 
+%    Av,Ah,Kv,Kh (constant or (n,1) columns)
 % 
 % OUTPUTS:
 % v,vz,vzz,b,n2,Ri,zz: profiles used to compute the FGM
@@ -28,7 +38,7 @@
 % modified FGM.m for TG_SI_mean_ex1.m
 % S.Tan, IOCAS, 2019/09/18
 
-function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,GR0,CR0,CI0,W0]=FGM_mean_ex1(data,dz,D1,D2,HOWTO,BOT,K_init,L_init,nu,kap,iBC1,iBCN,k_thred,bs)
+function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,GR0,CR0,CI0,W0]=FGM_mean_ex1(data,dz,D1,D2,HOWTO,BOT,K_init,L_init,nu,kap,Av,Ah,Kv,Kh,iBC1,iBCN,k_thred,bs,tool)
 
     tic
     K = K_init;L = L_init;  
@@ -64,7 +74,21 @@ function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,
              l=find(abs(Ri)<1/4);
              if ~isempty(l)
                  kt=sqrt(K(i)^2+L(j)^2);
-                 [sigs,w]=SSF(zz,v,b,kt,0,nu,kap,iBC1,iBCN,1);
+                 if tool == 1
+                    [sigs,w]=SSF(zz,v,b,kt,0,nu,kap,iBC1,iBCN,1);
+                 elseif tool == 2
+                     n2=BaryL(zz,1,6)*b; % differentiate buoyancy - 6th-order finite difference
+                     vz=BaryL(zz,1,6)*v;vzz=BaryL(zz,2,6)*v;
+                     if length(Av)>1
+                        FG = vTG_FGprep(zz,v,v*0,n2,Av,Ah,Kv,Kh); 
+                        [sigs,w]=vTG_FG(zz,v,v*0,Av,Ah,kt,0,1,FG);
+                     else
+                        FG = vTG_FGprep(zz,v,v*0,n2,ones(size(zz))*Av,ones(size(zz))*Ah,ones(size(zz))*Kv,ones(size(zz))*Kh); 
+                        [sigs,w]=vTG_FG(zz,v,v*0,Av,Ah,kt,0,1,FG);
+                     end
+                 else
+                     error('TOOL MUST BE 1 OR 2')
+                 end
                  inst=real(sigs)/kt;
                  cphs=-imag(sigs)/kt;
                  ww=real(w(:,:));
@@ -113,6 +137,10 @@ function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,
         % data processing step-3
     %     [v,vz,vzz,b,n2,Ri,zz]=DP_3(v,b,n2,zz,dz);
         [v,vz,vzz,b,n2,Ri,zz]=DP_0(v,vz,vzz,b,n2,Ri,zz);   
+         if tool == 2
+             n2=BaryL(zz,1,6)*b; % differentiate buoyancy - 6th-order finite difference
+             vz=BaryL(zz,1,6)*v;vzz=BaryL(zz,2,6)*v;
+         end
         
         % critical level
         [tp,l]=turning_pt(v,CR_FGM);CL_FGM=[];
