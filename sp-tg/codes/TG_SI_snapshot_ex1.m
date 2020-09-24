@@ -11,10 +11,20 @@
 % HOWTO: 1- linear interp; 2-segment mean
 % BOT: data profile starts from 1-DEEPEST DATA POINT 2- REAL SEA BOTTOM
 % K_init, L_init: initial guesses of wave numbers in x and y directions
-% nu, kap: background viscosity, diffusivity
-% iBC1, iBCN: boundary condition
 % k_thred: theredhold for k ; 1- 2.*pi./7/(bs/2); 2- do not apply
 % bs: bin-size of the measurments (resolution of data)
+% tool: 1- the Finite difference method (FD) 2- the Fourier-Galerkin method (FG)
+% iBC1, iBCN: boundary condition
+%   FD - 
+%   (1) velocity: 1=rigid (2nd order: w_{hat}=0; 4th order: w_{hat}=0, w_{hat}_z=0), 0=frictionless (2nd order: w_{hat}_z=kw_{hat}; 4th order: w_{hat}=0, w_{hat}_zz=0)
+%   (2) buoyancy: 1=insulating (b_{hat}_z=0 suggesting -\kappa\frac{\pb}{\pz}=0), 0=fixed-buoyancy (b_{hat}=0)                             
+%   FG -
+%   satisfies impermeable, frictionless, constant-buoyancy boundaries (w_{hat}=0,  w_{hat}_zz=0, b_{hat}=0)
+% background viscosity, diffusivity
+%    FD - 
+%    nu, kap (constant or (n,1) columns)
+%    FG - 
+%    Av,Ah,Kv,Kh (constant or (n,1) columns)
 %
 % OUTPUTS:
 % KFGM & GR - wave number & fastest growth rate
@@ -57,7 +67,8 @@ filename = 'sp12_1m_gridded_profiles_pc.mat';
 load /Users/tantanmeow/WORK/2018-2019/Samoan/model/sp12_1m_gridded_profiles_pc.mat
 
 %% parameters for the instability scan
-% ----------  used in SSF.m  ----------  
+tool = 2; % 1- FD ; 2- FG
+% ----------  used in SSF.m or vTG.m  ----------  
 % rangeing wave number for the first scan
 % % 1) only scan over one direction (only one velocity component needed)
 % k=-3:.01:0; 
@@ -66,9 +77,22 @@ load /Users/tantanmeow/WORK/2018-2019/Samoan/model/sp12_1m_gridded_profiles_pc.m
 k=[-3:.1:0]; 
 K=[-fliplr(10.^(k)) 0 10.^(k)];L=10.^(k); 
 
-% background diffusion and dissipation
+% (FD) background diffusion and dissipation
 nu=0;
 kap=0;
+% (FD)
+% boundary condition
+% (1) velocity: 1=rigid (2nd order: w_{hat}=0; 4th order: w_{hat}=0, w_{hat}_z=0), 0=frictionless (2nd order: w_{hat}_z=kw_{hat}; 4th order: w_{hat}=0, w_{hat}_zz=0)
+% (2) buoyancy: 1=insulating (b_{hat}_z=0 suggesting -\kappa\frac{\pb}{\pz}=0), 0=fixed-buoyancy (b_{hat}=0)                             
+iBC1 = [1,0]; % at z=z(0)     
+iBCN = iBC1;  % at z=z(N+1)
+
+% (FG) or vertical and horizontal eddy viscosity, vertical and horizontal eddy diffusivity
+Av=0;Ah=0;Kv=0;Kh=0;
+% no need to specify BC : 
+% Lian et al. (2020): This choice of basis functions is natural for impermeable, frictionless, constant-buoyancy
+% boundaries, and may be adapted for insulating boundaries by expanding b_{hat} in terms of cosines
+% rather than sines. But the method is not well-suited for rigid boundaries.
 
 % ----------  used in DP.m  ----------  
 % processed data grids (see HOWTO and BOT)
@@ -77,12 +101,6 @@ dz=10;
 HOWTO = 1;% 1- linear interp; 2-segment mean
 BOT=1; % data profile starts from 1-DEEPEST DATA POINT 2- REAL SEA BOTTOM
 D2=1500;D1=0;% only keep data above bottom D1 meters to D2 meters
-
-% boundary condition
-% (1) velocity: 1=rigid, 0=frictionless
-% (2) buoyancy: 1=insulating, 0=fixed-buoyancy
-iBC1 = [1,0]; % at z=z(0)    
-iBCN = iBC1;  % at z=z(N+1)
 
 % ----------  used in FGM.m  ----------  
 % bin-size of the measurments (resolution of data)
@@ -125,7 +143,7 @@ for profile=1:length(s)
     end
 
     % scan the (k,l) plane and pick out FGM    
-    [v,vz,vzz,b,n2,Ri_r,zz,II(profile),GR(profile),CR(profile),CI(profile),WFGM,KFGM(profile,:),CL_FGM,II0,GR0,CR0,CI0,W0]=FGM_snapshot_ex1(data,dz,D1,D2,HOWTO,BOT,K,L,nu,kap,iBC1,iBCN,k_thred,bs);
+    [v,vz,vzz,b,n2,Ri_r,zz,II(profile),GR(profile),CR(profile),CI(profile),WFGM,KFGM(profile,:),CL_FGM,II0,GR0,CR0,CI0,W0]=FGM_snapshot_ex1(data,dz,D1,D2,HOWTO,BOT,K,L,nu,kap,Av,Ah,Kv,Kh,iBC1,iBCN,k_thred,bs,tool);
     CL(profile,1:length(CL_FGM))=CL_FGM;
     W(:,profile)=interp1(zz,WFGM,zw);V(:,profile)=interp1(zz,v,zw);Vz(:,profile)=interp1(zz,vz,zw);Vzz(:,profile)=interp1(zz,vzz,zw);
     B(:,profile)=interp1(zz,b,zw);N2(:,profile)=interp1(zz,n2,zw);Ri(:,profile)=interp1(zz,Ri_r,zw);
