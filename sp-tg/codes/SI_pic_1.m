@@ -18,7 +18,7 @@
 
 function SI_pic_1(GR,K,L,bs,v,CR,CI,II,GR_max,CR_max,CI_max,K_max)
 COLOR=colormap(jet);
-COLOR=COLOR(1:3:end,:);
+% COLOR=COLOR(1:3:end,:);
 fs = 14; lw = 2; ms = 15;
 if length(K)>1&&length(L)>1
     subplot(211)
@@ -36,9 +36,10 @@ if length(K)>1&&length(L)>1
     bar=colorbar;
     hold on
     plot(K_max(1),K_max(2),'kp','markersize',ms,'linewidth',lw);
-    text(K(1),L(end)/5-L(1),strcat('Fastest growing wave'),'fontsize',fs,'color','k');
-    text(K(1),L(end)/3-L(1),strcat('Wave length=',num2str(2*pi/sqrt(K_max(1)^2+K_max(2)^2)),' m'),'fontsize',fs,'color','k');
-    text(K(1),2*L(end)/3-L(1),strcat('Growth rate= 2\pi/',num2str(2*pi/GR_max/3600),'hours'),'fontsize',fs,'color','k');
+%     text(K(1),L(end)/5-L(1),strcat('Fastest growing wave'),'fontsize',fs,'color','k');
+    text(K(1),L(end)/3-L(1),strcat('Wavelength_x=',num2str(2*pi/K_max(1)),' m','  Wavelength_y=',num2str(2*pi/K_max(2)),' m'),'fontsize',fs,'color','k');
+    text(K(1),2*L(end)/3-L(1),strcat('Wavelength_all=',num2str(2*pi/sqrt(K_max(1)^2+K_max(2)^2)),' m'),'fontsize',fs,'color','k');
+    text(K(1),3*L(end)/3-L(1),strcat('Growth rate= 2\pi/',num2str(2*pi/GR_max/3600),'hours'),'fontsize',fs,'color','k');
     grid on
 else
     subplot(211)

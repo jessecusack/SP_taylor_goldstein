@@ -21,7 +21,9 @@ hold on
 % h2=plot(imag(w(:,1)),zz,'-.');
 h2=plot(imag(w(:,1)),zz,'-.','linewidth',lw);
 hold on
-plot(0,CL,'kp','markersize',ms,'linewidth',lw);
+if ~isempty(CL)
+    plot(0,CL,'kp','markersize',ms,'linewidth',lw);
+end
 legend([h1,h2],'real','imag');
 xlabel('Fatest growing mode w(z)');
 ylabel('Depth');
@@ -34,6 +36,8 @@ hold on
 % plot(Ph,zz)
 plot(Ph,zz,'linewidth',lw)
 hold on
-plot(0,CL,'kp','markersize',ms,'linewidth',lw);
+if ~isempty(CL)
+    plot(0,CL,'kp','markersize',ms,'linewidth',lw);
+end
 xlabel('phase');
 grid on
