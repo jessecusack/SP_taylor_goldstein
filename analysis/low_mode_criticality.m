@@ -3,19 +3,23 @@
 
 % PARAMS
 % pick and arbitrary profile to start with
-pfl = 201;
+pfl = 505; 101;
 idx = pfl;
 % density of interface top
-sig4i = 1045.93;  % double check this matches the choice in other analysis.
+sig4i = 1045; %1045.93;  % double check this matches the choice in other analysis.
+sig4i_ = 1045.93;
 % Turbulent diffusivity (if constant)
 Kv0 = 1e-2;
 % To smooth profiles or not? Maybe diffusivity takes care of this?
-dosmoothing = false;
+dosmoothing = true;
 % Smoothing amounts
-bspan = 0.1;
-vspan = 0.3;
+zlp = 10;  % low pass wavelength in m
+zd = 1;  % sampling wavelength in m
+Np = zlp/zd;  % number of data points per wavelength
+mlp = 1/zlp;  % filter wavenumber cpm
+ms = 1/zd;  % sampling wavenumber cpm
 % wavenumber for Taylor Goldstein
-L = 100000;
+L = 500000;
 k = 2*pi/L;
 % Compute all modes (imode=1 gives fastest-growing unstable mode)
 imode = 0;
@@ -49,17 +53,8 @@ sig4 = sig4(use)';
 b = b(use)';
 z = z_(use);
 
-% cut out some data for speed
-u = u(1:step:end);
-v = v(1:step:end);
-sig4 = sig4(1:step:end);
-b = b(1:step:end);
-z = z(1:step:end);
-
-% rotate the velocity into the depth mean direction
-dz = 1*step;  % this is the bin size of each data point.
-U = sum(u*dz)/sum(dz*use);
-V = sum(v*dz)/sum(dz*use);
+U = sum(u*zd)/sum(zd*use);
+V = sum(v*zd)/sum(zd*use);
 % need the - and 2*pi because atan2 returns values in the range [-pi, pi]
 % and we want [0, 2*pi]
 angle = -atan2(V, U) + 2*pi;
@@ -67,35 +62,63 @@ up = u*cos(angle) - v*sin(angle);
 vp = u*sin(angle) + v*cos(angle);
 % after doing the above, up should contain all the depth mean velocity.
 
-%%%%%%% Taylor Goldstein analysis in the U direction
+% Diffusivity profile
+% kv = gamma*eps./bzs.^2;
+Kv = Kv0*ones(size(b));
+Kv(sig4 < sig4i_) = 1e-4;
+
+%% %%%%% Taylor Goldstein analysis in the U direction
 
 Mdiff = BaryL(z, 1, 6);  % This is the differentiation matrix.
 
 % Smooth data
 if dosmoothing
-    us = smooth(z, up, vspan, 'rloess');
-    bs = smooth(z, b, bspan, 'rloess');
+    disp('Doing lowpass')
+    us = lowpass(up, mlp, ms, 'ImpulseResponse','iir');
+    bs = lowpass(b, mlp, ms, 'ImpulseResponse','iir');
+    sig4s = lowpass(sig4, mlp, ms, 'ImpulseResponse','iir');
     bz = Mdiff*bs;
+    zs = z;
+    Kvs = Kv;
+    % Filter ringing at ends means we should cut off ends.
+%     us = us(1 + Np/2:end - Np/2);
+%     bs = bs(1 + Np/2:end - Np/2);
+%     sig4s = sig4s(1 + Np/2:end - Np/2);
+%     bz = bz(1 + Np/2:end - Np/2);
+%     zs = zs(1 + Np/2:end - Np/2);
+%     Kvs = Kvs(1 + Np/2:end - Np/2);
+    
 else
     us = up;
     bs = b;
+    sig4s = sig4;
     bz = Mdiff*bs;
+    zs = z;
+    Kvs = Kv;
+    
 end
 
-% Diffusivity profile
-% kv = gamma*eps./bzs.^2;
-[nz, ~] = size(bs);
-Kv = Kv0*ones(nz, 1);
-Kh = Kv;
-Av = Kv;
-Ah = Kv;
+
+% cut out some data for speed
+us = us(1:step:end);
+% v = v(1:step:end);
+sig4s = sig4s(1:step:end);
+bs = bs(1:step:end);
+bz = bz(1:step:end);
+zs = zs(1:step:end);
+Kvs = Kvs(1:step:end);
+
+% Other diffusivity/viscosity params
+Khs = Kvs;
+Avs = Kvs;
+Ahs = Kvs;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Use Fourier-Galerkin method to compute growth rates & eigfns
 % Compute Fourier integrals in advance
-FG = vTG_FGprep(z, us, 0*us, bz, Av, Ah, Kv, Kh); 
+FG = vTG_FGprep(zs, us, 0*us, bz, Avs, Ahs, Kvs, Khs); 
 % Compute growth rates & eigfns
-[om, we, be] = vTG_FG(z, us, 0*us, Av, Ah, k, 0, imode, FG);
+[om, we, be] = vTG_FG(zs, us, 0*us, Avs, Ahs, k, 0, imode, FG);
 % read above as returning
 % [frequency, w eigenvector, b eigenvector]
 
@@ -107,7 +130,7 @@ we = we(:, ind);
 be = be(:, ind);
 om = om(ind);
 % horizontal velocity eigenfunction
-ue = (1i/k)*Mdiff*we;
+ue = (1i/k)*BaryL(zs, 1, 6)*we;
 
 [~, imin] = min(cp);
 [~, imax] = max(cp);
@@ -123,6 +146,9 @@ hold on
 plot(lon, lat, 'k.')
 plot(lon(idx), lat(idx), 'ro')
 
+figure
+semilogx(Kvs, zs)
+
 % figure
 % plot(bs, z)
 % 
@@ -137,12 +163,15 @@ plot(lon(idx), lat(idx), 'ro')
 % Plot the buoyancy and velocity profiles.
 figure
 subplot(2, 3, 1)
-plot(bs, z, 'linewidth', lw)
+hold on
+plot(b, z, 'linewidth', lw)
+plot(bs, zs, 'linewidth', lw)
 title('b [m/s^2]')
 ylabel('z [m]')
 subplot(2, 3, 2)
 hold on
-plot(us, z, 'linewidth', lw)
+plot(up, z, 'linewidth', lw)
+plot(us, zs, 'linewidth', lw)
 title('u [m/s]')
 
 % plot phase speeds
@@ -161,7 +190,7 @@ ylim([yl(1)-.1, yl(2)+.1])
 
 % Plot eigenfunctions for fastest phase speed.
 subplot(2,3,4)
-plot(real(we(:,iplot)),z,'linewidth',lw)
+plot(real(we(:,iplot)), zs,'linewidth',lw)
 % hold on
 % plot(imag(we(:,imode)),z,'r','linewidth',lw)
 % legend('real','imag','location','southeast'); 
@@ -170,14 +199,14 @@ xlabel('w eigfn')
 title('fastest mode')
 
 subplot(2,3,5)
-plot(real(ue(:,iplot)), z, 'linewidth', lw)
+plot(real(ue(:,iplot)), zs, 'linewidth', lw)
 % hold on
 % plot(imag(ue(:,imode)),z,'r','linewidth',lw)
 xlabel('u eigfn')
 title(sprintf('c_r=%.3em/s', cp(iplot)))
 
 subplot(2,3,6)
-plot(real(be(:, iplot)), z, 'linewidth', lw)
+plot(real(be(:, iplot)), zs, 'linewidth', lw)
 % hold on
 % plot(imag(be(:,imode)),z,'r','linewidth',lw)
 xlabel('b eigfn')
