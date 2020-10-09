@@ -21,3 +21,6 @@ dependencies:
 - xarray
 - utm
 - munch
+- tqdm
+- black
+- isort
