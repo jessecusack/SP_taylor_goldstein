@@ -24,3 +24,5 @@ dependencies:
 - tqdm
 - black
 - isort
+- pip:
+    - mixsea

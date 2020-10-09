@@ -9,6 +9,7 @@ import gsw
 import seawater
 from oceans.sw_extras import gamma_GP_from_SP_pt
 import utm
+import mixsea as mx
 
 
 data_in = "../raw_data"
@@ -36,6 +37,7 @@ sig4b = 1045.9  # The potential density used in the buoyancy estimate
 sig4max = 1045.93
 dc = 50  # step size for estimating distances
 serr = 34.65  # Lowest salinity that we do not classify as an error
+bin_width = 20  # adiabatic levelling method bin width in metres 
 
 iP5 = 0
 iP2 = 0
@@ -74,7 +76,7 @@ for j, (file, TY) in enumerate(zip(towyo_files, TOWYOs)):
 
     _, Np = TY["t1"].shape
     
-    print("- Fixing salinity errors by linear inerpolation")
+    print("- Fixing salinity errors by linear interpolation")
     allbad = TY["s1"] < serr  # will catch nans
     # Don't want to interpolate nans
     nans = np.isnan(TY["s1"])
@@ -194,12 +196,22 @@ for j, (file, TY) in enumerate(zip(towyo_files, TOWYOs)):
     LT_counter = []
     Lo_counter = []
     TY["N2_smoothed"] = np.full_like(TY["N2_sorted"], np.nan)
+    TY["N2_ref"] = np.full_like(TY["N2_sorted"], np.nan)
 
     for i in range(Np):
         nans = np.isnan(TY["sig4"][:, i])
         if nans.all():
             continue
-
+            
+        # Adiabatic level buoyancy
+        P = TY["P"][:, i]
+        S = TY["S"][:, i]
+        T = TY["T"][:, i]
+        lon = TY["mlon"][i]
+        lat = TY["mlat"][i]
+        TY["N2_ref"][:, i] = mx.nsq.adiabatic_leveling(P, S, T, lon, lat, bin_width=bin_width, order=1)
+        
+        # Dissipation
         z = TY["z"][~nans, i]
         den = TY["sig4"][~nans, i]
 

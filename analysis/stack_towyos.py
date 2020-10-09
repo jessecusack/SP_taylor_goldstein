@@ -57,7 +57,7 @@ if __name__ == "__main__":
     datavars = {}
 
     # Fill data dictionary
-    varlist = ["T", "S", "CT", "SA", "u", "v", "sig4", "sig4_sorted", "b", "b_sorted", "eps", "LT", "Lo", "N2_overturn"]
+    varlist = ["T", "S", "CT", "SA", "u", "v", "sig4", "sig4_sorted", "b", "b_sorted", "eps", "LT", "Lo", "N2_overturn", "N2_ref"]
     for var in varlist:
         datavars[var] = (["z", "pfl"], stack2Dvar(TYs_, var, zmin, zmax, dz, npfls))
 
