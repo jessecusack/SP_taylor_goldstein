@@ -150,7 +150,7 @@ ERR_K_all=nan(length(s),length(K),length(L));
 ERR_B_all=nan(length(s),length(K),length(L));  
 
 vdata = v; udata = u; zdata = z; 
-for profile=12:length(s)
+for profile=15:length(s)
     data.v=vdata(find(~isnan(vdata(:,profile))),profile);data.u=udata(find(~isnan(vdata(:,profile))),profile);data.z=zdata(find(~isnan(vdata(:,profile))),profile);
     data.hab=bdepth(profile)-max(depth(find(~isnan(vdata(:,profile))),profile));
     data.sigma4=sig4_sorted(find(~isnan(vdata(:,profile))),profile); %use sorted profiles that Jesse already generated
