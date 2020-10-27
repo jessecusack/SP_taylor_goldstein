@@ -117,7 +117,7 @@ k_thred = 1; % 1- 2.*pi./7/(bs/2); 2- do not apply
 scan2 = 1;
 
 % butterworth low-pass filter window
-fl_bw = 40;
+fl_bw = 100;
 
 %% below is an example for the sorted two-yo profiles
 % load data
@@ -170,17 +170,17 @@ for profile=12:length(s)
     if ~isnan(GR(profile))
         figure(profile)
         SI_pic_1(GR0,K,L,bs,v,CR0,CI0,II0,GR(profile),CR(profile),CI(profile),KFGM(profile,:))
-        print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex4_1_',num2str(profile))])
+        print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex5_1_',num2str(profile))])
         % plot w
         figure(profile+50)
         [Ph]=SI_pic_2(WFGM,sqrt(KFGM(profile,1)^2+KFGM(profile,2)^2),zz,CL(profile,:));
-        print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex4_2_',num2str(profile))])
+        print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex5_2_',num2str(profile))])
     end
     % plot profiles
     figure(profile+100)
     DP_pic(v,vz,vzz,b,n2,Ri_r,zz)
     set(gcf, 'PaperPosition',[0 0 8 4]);
-    print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex4_3_',num2str(profile))])
+    print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex5_3_',num2str(profile))])
 
     close all
     
@@ -192,5 +192,5 @@ for profile=12:length(s)
 
 end
 LON = mlon; LAT = mlat;
-eval(strcat('save TG_SI_',  filename(filenum).name(1:end-4), '_ex4.mat II GR CR CI CL KFGM K L zw W V Vz Vzz B N2 Ri LON LAT botz GR_all CL_all ERR_K_all ERR_B_all'))
+eval(strcat('save TG_SI_',  filename(filenum).name(1:end-4), '_ex5.mat II GR CR CI CL KFGM K L zw W V Vz Vzz B N2 Ri LON LAT botz GR_all CL_all ERR_K_all ERR_B_all'))
 end
