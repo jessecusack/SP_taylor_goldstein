@@ -134,6 +134,9 @@ V=nan(length(zw),length(s));Vz=nan(length(zw),length(s));Vzz=nan(length(zw),leng
 % buoyancy, N squre and Richardson number profiles
 B=nan(length(zw),length(s));N2=nan(length(zw),length(s));Ri=nan(length(zw),length(s));
 
+GR_all=nan(length(s),length(K),length(L));  
+% W_all=nan(length(zw),length(s),length(K),length(L)); 
+
 vdata = v; udata = u; zdata = z; 
 for profile=1:length(s)
     data.v=vdata(find(~isnan(vdata(:,profile))),profile);data.u=udata(find(~isnan(vdata(:,profile))),profile);data.z=zdata(find(~isnan(vdata(:,profile))),profile);
@@ -169,8 +172,11 @@ for profile=1:length(s)
     print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex1_3_',num2str(profile))])
 
     close all
-
+    
+    GR_all(profile,:,:)=GR0;
+%     W_all(:,profile,:,:)=interp1(zz,W0,zw);
+    
 end
 LON = mlon; LAT = mlat;
-eval(strcat('save TG_SI_',  filename(filenum).name(1:end-4), '_ex1.mat II GR CR CI CL KFGM K L zw W V Vz Vzz B N2 Ri LON LAT botz'))
+eval(strcat('save TG_SI_',  filename(filenum).name(1:end-4), '_ex1.mat II GR CR CI CL KFGM K L zw W V Vz Vzz B N2 Ri LON LAT botz GR_all'))
 end

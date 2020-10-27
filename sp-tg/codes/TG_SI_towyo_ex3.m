@@ -49,7 +49,7 @@
 % the example in this script is tested on tow-yo profiles, 
 % only use DP.m and DP_0.m to process data
 % use data from bottom to 200m above interface
-% FG method, no background viscosity, diffusivity, 2nd scan
+% FG method, 1e-4 background viscosity, diffusivity, no 2nd scan
 % S.Tan, Yantai, 2019/09/23
 
 clear all
@@ -81,8 +81,8 @@ disp(strcat('y: wave length ranges from ', num2str(2*pi/L(end)), 'm', 'to', num2
 % x: wave length ranges from39.6442mto198.6918to inf
 % y: wave length ranges from39.6442mto628.3185m
 % (FD) background diffusion and dissipation
-nu=0;
-kap=0;
+nu=1e-4;
+kap=1e-4;
 % (FD)
 % boundary condition
 % (1) velocity: 1=rigid (2nd order: w_{hat}=0; 4th order: w_{hat}=0, w_{hat}_z=0), 0=frictionless (2nd order: w_{hat}_z=kw_{hat}; 4th order: w_{hat}=0, w_{hat}_zz=0)
@@ -91,7 +91,7 @@ iBC1 = [1,0]; % at z=z(0)
 iBCN = iBC1;  % at z=z(N+1)
 
 % (FG) or vertical and horizontal eddy viscosity, vertical and horizontal eddy diffusivity
-Av=0;Ah=0;Kv=0;Kh=0;
+Av=1e-4;Ah=1e-4;Kv=1e-4;Kh=1e-4;
 % no need to specify BC : 
 % Lian et al. (2020): This choice of basis functions is natural for impermeable, frictionless, constant-buoyancy
 % boundaries, and may be adapted for insulating boundaries by expanding b_{hat} in terms of cosines
@@ -112,7 +112,7 @@ bs=8; % 10m or 16m? I'm not sure
 k_thred = 1; % 1- 2.*pi./7/(bs/2); 2- do not apply
 
 % perform 2nd scan
-scan2 = 2;
+scan2 = 1;
 
 %% below is an example for the sorted two-yo profiles
 % load data
@@ -160,17 +160,17 @@ for profile=1:length(s)
     if ~isnan(GR(profile))
         figure(profile)
         SI_pic_1(GR0,K,L,bs,v,CR0,CI0,II0,GR(profile),CR(profile),CI(profile),KFGM(profile,:))
-        print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex2_1_',num2str(profile))])
+        print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex3_1_',num2str(profile))])
         % plot w
         figure(profile+50)
         [Ph]=SI_pic_2(WFGM,sqrt(KFGM(profile,1)^2+KFGM(profile,2)^2),zz,CL(profile,:));
-        print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex2_2_',num2str(profile))])
+        print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex3_2_',num2str(profile))])
     end
     % plot profiles
     figure(profile+100)
     DP_pic(v,vz,vzz,b,n2,Ri_r,zz)
     set(gcf, 'PaperPosition',[0 0 8 4]);
-    print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex2_3_',num2str(profile))])
+    print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex3_3_',num2str(profile))])
 
     close all
     
@@ -179,5 +179,5 @@ for profile=1:length(s)
 
 end
 LON = mlon; LAT = mlat;
-eval(strcat('save TG_SI_',  filename(filenum).name(1:end-4), '_ex2.mat II GR CR CI CL KFGM K L zw W V Vz Vzz B N2 Ri LON LAT botz GR_all'))
+eval(strcat('save TG_SI_',  filename(filenum).name(1:end-4), '_ex3.mat II GR CR CI CL KFGM K L zw W V Vz Vzz B N2 Ri LON LAT botz GR_all'))
 end
