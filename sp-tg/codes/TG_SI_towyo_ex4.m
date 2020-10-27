@@ -122,7 +122,7 @@ fl_bw = 40;
 %% below is an example for the sorted two-yo profiles
 % load data
 filename=dir(strcat(datadirec,'TY*'));
-for filenum=1:length(filename)
+for filenum=15:length(filename)
     load(strcat(datadirec,filename(filenum).name))
     s = mlon; %number of profiles
 
@@ -150,7 +150,7 @@ ERR_K_all=nan(length(s),length(K),length(L));
 ERR_B_all=nan(length(s),length(K),length(L));  
 
 vdata = v; udata = u; zdata = z; 
-for profile=15:length(s)
+for profile=1:length(s)
     data.v=vdata(find(~isnan(vdata(:,profile))),profile);data.u=udata(find(~isnan(vdata(:,profile))),profile);data.z=zdata(find(~isnan(vdata(:,profile))),profile);
     data.hab=bdepth(profile)-max(depth(find(~isnan(vdata(:,profile))),profile));
     data.sigma4=sig4_sorted(find(~isnan(vdata(:,profile))),profile); %use sorted profiles that Jesse already generated
