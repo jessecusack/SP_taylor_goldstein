@@ -51,20 +51,22 @@
 %                 reduced the vertical grid spacing, FD or FG methods,
 %                 inviscid vs viscous,
 % S.Tan, IOCAS, 2019/09/22
+% modified to suit TG_SI_towyo_ex4.m: 
+% data process follows: DP, DP0, then low pass filter
+% results include GR_all, CL_all (critical layer depth), Errs for perturbation Kinetic
+% energy and perturbation density budgets
+% S.Tan, Yantai, 2020/10/26
 
-function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,GR0,CR0,CI0,W0,II,GR,CR,CI,W,K_iter,L_iter]=FGM_towyo_ex1(data,dz,D1,D2,HOWTO,BOT,K_init,L_init,nu,kap,Av,Ah,Kv,Kh,iBC1,iBCN,k_thred,bs,tool,scan2)
+function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,ERR_K_FGM,ERR_B_FGM,II0,GR0,CR0,CI0,W0,CL0,ERR_K0,ERR_B0,II,GR,CR,CI,W,K_iter,L_iter]=FGM_towyo_ex4(data,dz,D1,D2,HOWTO,BOT,K_init,L_init,nu,kap,Av,Ah,Kv,Kh,iBC1,iBCN,k_thred,bs,tool,scan2,fl)
 
     tic
     K = K_init;L = L_init;  
     % data processing step-0
     [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz,D1,D2,K(1),L(1),HOWTO,BOT);
-    % data processing step-1 (optional)
-%     [v,vz,vzz,b,n2,Ri,zz]=DP_1(v,b,zz); 
-    % data processing step-2
-%     [v,vz,vzz,b,n2,Ri,zz]=DP_2(v,b,n2,zz,dz,100); % low pass filter :(... ,dz,fl)
-    % data processing step-3
-%     [v,vz,vzz,b,n2,Ri,zz]=DP_3(v,b,n2,zz,dz);
     [v,vz,vzz,b,n2,Ri,zz]=DP_0(v,vz,vzz,b,n2,Ri,zz);
+    % low-pass filter
+    v=butterworth_lp(v,fl/dz,4,length(v));
+    vz=ddz(zz)*v;vzz=ddz2(zz)*v;
 
     % ------ first scan ------  
     KT0=nan(length(K),length(L));
@@ -73,23 +75,27 @@ function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,
     CR0=nan(length(K),length(L));
     CI0=nan(length(K),length(L));
     W0=nan(length(zz),length(K),length(L));
+    CL0=nan(length(K),length(L));
+    ERR_K0=nan(length(K),length(L));
+    ERR_B0=nan(length(K),length(L));
     for i=1:length(K)
         for j=1:length(L)           
             [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz,D1,D2,K(i),L(j),HOWTO,BOT);
-            % data processing step-1 (optional)
-        %     [v,vz,vzz,b,n2,Ri,zz]=DP_1(v,b,zz); 
-            % data processing step-2
-        %     [v,vz,vzz,b,n2,Ri,zz]=DP_2(v,b,n2,zz,dz,100); % low pass filter :(... ,dz,fl)
-            % data processing step-3
-        %     [v,vz,vzz,b,n2,Ri,zz]=DP_3(v,b,n2,zz,dz);
             [v,vz,vzz,b,n2,Ri,zz]=DP_0(v,vz,vzz,b,n2,Ri,zz); 
+            % low-pass filter
+            v=butterworth_lp(v,fl/dz,4,length(v));
+            vz=ddz(zz)*v;vzz=ddz2(zz)*v;
             
              % skip for min(Ri_r)>1/4 
              l=find(abs(Ri)<1/4);
              if ~isempty(l)
                  kt=sqrt(K(i)^2+L(j)^2);
                  if tool == 1
-                    [sigs,w]=SSF(zz,v,b,kt,0,nu,kap,iBC1,iBCN,1);
+                    [sigs,w,bh]=SSF(zz,v,b,kt,0,nu,kap,iBC1,iBCN,1);
+                    % perturbation kinetic energy
+                    [u,p,Kbud.K,Kbud.SP,Kbud.EF,Kbud.cEF,Kbud.BF,Kbud.EFn,Kbud.cEFn,Kbud.eps,Kbud.RH,Kbud.LH,Kbud.err]=FGM_energetics(zz,v,kt,0,nu,sigs,w,bh);
+                    % buoyancy variance
+                    [Bbud.BV,Bbud.BVP,Bbud.LH_B,Bbud.RH_B,Bbud.chi,Bbud.BVF,Bbud.cBVF,Bbud.err_B]=FGM_buoyancy(zz,n2,kt,0,kap,sigs,w,bh);
                  elseif tool == 2
                      n2=BaryL(zz,1,6)*b; % differentiate buoyancy - 6th-order finite difference
                      vz=BaryL(zz,1,6)*v;
@@ -100,11 +106,15 @@ function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,
                      end
                      if length(Av)>1
                         FG = vTG_FGprep(zz,v,v*0,n2,Av,Ah,Kv,Kh); 
-                        [sigs,w]=vTG_FG(zz,v,v*0,Av,Ah,kt,0,1,FG);
+                        [sigs,w,bh]=vTG_FG(zz,v,v*0,Av,Ah,kt,0,1,FG);
                      else
                         FG = vTG_FGprep(zz,v,v*0,n2,ones(size(zz))*Av,ones(size(zz))*Ah,ones(size(zz))*Kv,ones(size(zz))*Kh); 
-                        [sigs,w]=vTG_FG(zz,v,v*0,ones(size(zz))*Av,ones(size(zz))*Ah,kt,0,1,FG);
+                        [sigs,w,bh]=vTG_FG(zz,v,v*0,ones(size(zz))*Av,ones(size(zz))*Ah,kt,0,1,FG);
                      end
+                     % perturbation kinetic energy
+                     [u,p,Kbud.K,Kbud.SP,Kbud.EF,Kbud.cEF,Kbud.BF,Kbud.EFn,Kbud.cEFn,Kbud.eps,Kbud.RH,Kbud.LH,Kbud.err]=FGM_energetics(zz,v,kt,0,Av,sigs,w,bh);
+                     % buoyancy variance
+                     [Bbud.BV,Bbud.BVP,Bbud.LH_B,Bbud.RH_B,Bbud.chi,Bbud.BVF,Bbud.cBVF,Bbud.err_B]=FGM_buoyancy(zz,n2,kt,0,Kv,sigs,w,bh);
                  else
                      error('TOOL MUST BE 1 OR 2')
                  end
@@ -118,6 +128,9 @@ function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,
                  CI0(i,j)=inst(1);
                  W0(:,i,j)=w;
                  KT0(i,j)=kt;
+                 ERR_K0(i,j)=Kbud.err;
+                 ERR_B0(i,j)=Bbud.err_B;
+                 CL0(i,j)=zz(find(Kbud.K==max(Kbud.K)));
              end
         end
     end
@@ -160,37 +173,39 @@ function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,
 %         dz2 = dz/2;
         dz2=dz;
         [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz2,D1,D2,K_iter(1),L_iter(1),HOWTO,BOT);
-        % data processing step-1 (optional)
-    %     [v,vz,vzz,b,n2,Ri,zz]=DP_1(v,b,zz); 
-        % data processing step-2
-    %     [v,vz,vzz,b,n2,Ri,zz]=DP_2(v,b,n2,zz,dz2,100); % low pass filter :(... ,dz2,fl)
-        % data processing step-3
-    %     [v,vz,vzz,b,n2,Ri,zz]=DP_3(v,b,n2,zz,dz2);
         [v,vz,vzz,b,n2,Ri,zz]=DP_0(v,vz,vzz,b,n2,Ri,zz);
+        % low-pass filter
+        v=butterworth_lp(v,fl/dz2,4,length(v));
+        vz=ddz(zz)*v;vzz=ddz2(zz)*v;
+
         KT1=nan(length(K_iter),length(L_iter));
         II1=nan(length(K_iter),length(L_iter));
         GR1=nan(length(K_iter),length(L_iter));
         CR1=nan(length(K_iter),length(L_iter));
         CI1=nan(length(K_iter),length(L_iter));
         W1=nan(length(zz),length(K_iter),length(L_iter));
+        CL1=nan(length(K_iter),length(L_iter));
+        ERR_K1=nan(length(K_iter),length(L_iter));
+        ERR_B1=nan(length(K_iter),length(L_iter));
 
         for i=1:length(K_iter)
             for j=1:length(L_iter)           
                 [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz2,D1,D2,K_iter(i),L_iter(j),HOWTO,BOT);
-                % data processing step-1 (optional)
-            %     [v,vz,vzz,b,n2,Ri,zz]=DP_1(v,b,zz); 
-                % data processing step-2
-            %     [v,vz,vzz,b,n2,Ri,zz]=DP_2(v,b,n2,zz,dz2,100); % low pass filter :(... ,dz2,fl)
-                % data processing step-3
-            %     [v,vz,vzz,b,n2,Ri,zz]=DP_3(v,b,n2,zz,dz2);
                 [v,vz,vzz,b,n2,Ri,zz]=DP_0(v,vz,vzz,b,n2,Ri,zz); 
+                % low-pass filter
+                v=butterworth_lp(v,fl/dz2,4,length(v));
+                vz=ddz(zz)*v;vzz=ddz2(zz)*v;
 
                  % skip for min(Ri_r)>1/4 
                  l=find(abs(Ri)<1/4);
                  if ~isempty(l)
                      kt=sqrt(K_iter(i)^2+L_iter(j)^2);
                      if tool == 1
-                        [sigs,w]=SSF(zz,v,b,kt,0,nu,kap,iBC1,iBCN,1);
+                        [sigs,w,bh]=SSF(zz,v,b,kt,0,nu,kap,iBC1,iBCN,1);
+                        % perturbation kinetic energy
+                        [u,p,Kbud.K,Kbud.SP,Kbud.EF,Kbud.cEF,Kbud.BF,Kbud.EFn,Kbud.cEFn,Kbud.eps,Kbud.RH,Kbud.LH,Kbud.err]=FGM_energetics(zz,v,kt,0,nu,sigs,w,bh);
+                        % buoyancy variance
+                        [Bbud.BV,Bbud.BVP,Bbud.LH_B,Bbud.RH_B,Bbud.chi,Bbud.BVF,Bbud.cBVF,Bbud.err_B]=FGM_buoyancy(zz,n2,kt,0,kap,sigs,w,bh);
                      elseif tool == 2
                          n2=BaryL(zz,1,6)*b; % differentiate buoyancy - 6th-order finite difference
                          vz=BaryL(zz,1,6)*v;
@@ -201,11 +216,15 @@ function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,
                          end
                          if length(Av)>1
                             FG = vTG_FGprep(zz,v,v*0,n2,Av,Ah,Kv,Kh); 
-                            [sigs,w]=vTG_FG(zz,v,v*0,Av,Ah,kt,0,1,FG);
+                            [sigs,w,bh]=vTG_FG(zz,v,v*0,Av,Ah,kt,0,1,FG);
                          else
                             FG = vTG_FGprep(zz,v,v*0,n2,ones(size(zz))*Av,ones(size(zz))*Ah,ones(size(zz))*Kv,ones(size(zz))*Kh); 
-                            [sigs,w]=vTG_FG(zz,v,v*0,ones(size(zz))*Av,ones(size(zz))*Ah,kt,0,1,FG);
+                            [sigs,w,bh]=vTG_FG(zz,v,v*0,ones(size(zz))*Av,ones(size(zz))*Ah,kt,0,1,FG);
                          end
+                         % perturbation kinetic energy
+                         [u,p,Kbud.K,Kbud.SP,Kbud.EF,Kbud.cEF,Kbud.BF,Kbud.EFn,Kbud.cEFn,Kbud.eps,Kbud.RH,Kbud.LH,Kbud.err]=FGM_energetics(zz,v,kt,0,Av,sigs,w,bh);
+                         % buoyancy variance
+                         [Bbud.BV,Bbud.BVP,Bbud.LH_B,Bbud.RH_B,Bbud.chi,Bbud.BVF,Bbud.cBVF,Bbud.err_B]=FGM_buoyancy(zz,n2,kt,0,Kv,sigs,w,bh);
                      else
                          error('TOOL MUST BE 1 OR 2')
                      end
@@ -219,6 +238,9 @@ function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,
                      CI1(i,j)=inst(1);
                      W1(:,i,j)=w;
                      KT1(i,j)=kt;
+                     ERR_K1(i,j)=Kbud.err;
+                     ERR_B1(i,j)=Bbud.err_B;
+                     CL1(i,j)=zz(find(Kbud.K==max(Kbud.K)));
                  end
             end
         end
@@ -232,15 +254,13 @@ function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,
            error('k_thred must be 1 or 2');
         end
         K = K_iter;L = L_iter;  
-        II=II1;GR=GR1;CR=CR1;CI=CI1;W=W1;
+        II=II1;GR=GR1;CR=CR1;CI=CI1;W=W1;CL=CL1;ERR_K=ERR_K1;ERR_B=ERR_B1;
         [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz2,D1,D2,K(l1),L(l2),HOWTO,BOT);
-        % data processing step-1 (optional)
-    %     [v,vz,vzz,b,n2,Ri,zz]=DP_1(v,b,zz); 
-        % data processing step-2
-    %     [v,vz,vzz,b,n2,Ri,zz]=DP_2(v,b,n2,zz,dz2,100); % low pass filter :(... ,dz2,fl)
-        % data processing step-3
-    %     [v,vz,vzz,b,n2,Ri,zz]=DP_3(v,b,n2,zz,dz2);
-        [v,vz,vzz,b,n2,Ri,zz]=DP_0(v,vz,vzz,b,n2,Ri,zz);   
+        [v,vz,vzz,b,n2,Ri,zz]=DP_0(v,vz,vzz,b,n2,Ri,zz); 
+        % low-pass filter
+        v=butterworth_lp(v,fl/dz,4,length(v));
+        vz=ddz(zz)*v;vzz=ddz2(zz)*v;
+
          if tool == 2
              n2=BaryL(zz,1,6)*b; % differentiate buoyancy - 6th-order finite difference
              vz=BaryL(zz,1,6)*v;
@@ -250,17 +270,15 @@ function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,
                  vzz=nan(size(vz));
              end
          end
+         
     elseif scan2==1
         K = K_init;L = L_init;  
-        II=II0;GR=GR0;CR=CR0;CI=CI0;W=W0; 
+        II=II0;GR=GR0;CR=CR0;CI=CI0;W=W0;CL=CL0;ERR_K=ERR_K0;ERR_B=ERR_B0;
         [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz,D1,D2,K(l1),L(l2),HOWTO,BOT);
-        % data processing step-1 (optional)
-    %     [v,vz,vzz,b,n2,Ri,zz]=DP_1(v,b,zz); 
-        % data processing step-2
-    %     [v,vz,vzz,b,n2,Ri,zz]=DP_2(v,b,n2,zz,dz,100); % low pass filter :(... ,dz,fl)
-        % data processing step-3
-    %     [v,vz,vzz,b,n2,Ri,zz]=DP_3(v,b,n2,zz,dz);
-        [v,vz,vzz,b,n2,Ri,zz]=DP_0(v,vz,vzz,b,n2,Ri,zz);   
+        [v,vz,vzz,b,n2,Ri,zz]=DP_0(v,vz,vzz,b,n2,Ri,zz); 
+        % low-pass filter
+        v=butterworth_lp(v,fl/dz,4,length(v));
+        vz=ddz(zz)*v;vzz=ddz2(zz)*v;
          if tool == 2
              n2=BaryL(zz,1,6)*b; % differentiate buoyancy - 6th-order finite difference
              vz=BaryL(zz,1,6)*v;
@@ -280,18 +298,22 @@ function [v,vz,vzz,b,n2,Ri,zz,I_FGM,GR_FGM,CR_FGM,CI_FGM,W_FGM,K_FGM,CL_FGM,II0,
         CI_FGM = CI(l1,l2);
         W_FGM = W(:,l1,l2);
         K_FGM = [K(l1) L(l2)];
+        CL_FGM = CL(l1,l2);
+        ERR_K_FGM = ERR_K(l1,l2);
+        ERR_B_FGM = ERR_B(l1,l2);
 
-        % critical level
-        [tp,l]=turning_pt(v,CR_FGM);CL_FGM=[];
-        if tp == 0
-           CL_FGM = nan;
-        else
-           for i=1:tp
-               CL_FGM(i) = interp1([v(l(i)) v(l(i)+1)],[zz(l(i)) zz(l(i)+1)],CR_FGM);
-           end
-        end
+%         % critical level
+%         [tp,l]=turning_pt(v,CR_FGM);CL_FGM=[];
+%         if tp == 0
+%            CL_FGM = nan;
+%         else
+%            for i=1:tp
+%                CL_FGM(i) = interp1([v(l(i)) v(l(i)+1)],[zz(l(i)) zz(l(i)+1)],CR_FGM);
+%            end
+%         end
     else
         I_FGM = nan; GR_FGM = nan; CR_FGM = nan; CI_FGM = nan; CL_FGM = nan; W_FGM = nan(size(v)); K_FGM = [nan nan];
+        ERR_K_FGM = nan; ERR_B_FGM = nan;
         v = nan(size(v)); vz = nan(size(v)); vzz = nan(size(v));b = nan(size(v)); n2 = nan(size(v)); Ri = nan(size(v));
     end 
     
