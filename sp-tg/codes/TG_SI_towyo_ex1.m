@@ -49,8 +49,8 @@
 % the example in this script is tested on tow-yo profiles, 
 % only use DP.m and DP_0.m to process data
 % use data from bottom to 200m above interface
-% FD method, assume rigid lid, no background viscosity, diffusivity, 2nd scan
-% S.Tan, Yantai, 2019/09/22
+% FG method (automatically satisfies frictionless BC), no background viscosity, diffusivity, 1nd scan
+% S.Tan, Yantai, 2019/10/28
 
 clear all
 close all
@@ -64,9 +64,11 @@ mdirec='/Users/tantanmeow/Desktop/WORK/2018-2019/Jesse/sp-tg/';
 datadirec='/Users/tantanmeow/Desktop/WORK/2018-2019/Jesse/proc_data/';
 % add Matlab tools to path
 addpath(genpath(strcat(mdirec,'tools/')));
+addpath(genpath(strcat(mdirec,'codes/')));
+addpath('/Users/tantanmeow/WORK/2017-2018/work-larry/Fig11/TG1/Bill_new/');
 
 %% parameters for the instability scan
-tool = 1; % 1- FD ; 2- FG
+tool = 2; % 1- FD ; 2- FG
 % ----------  used in SSF.m or vTG.m  ----------  
 % rangeing wave number for the first scan
 % % 1) only scan over one direction (only one velocity component needed)
@@ -76,9 +78,10 @@ tool = 1; % 1- FD ; 2- FG
 % 2) only scan over two directions (both velocity component required)
 k=[-1.5:.02:-.8]; K=[-fliplr(10.^(k)) 0 10.^(k)];
 l=[-2:.02:-.8]; L=10.^(l); 
-disp(strcat('wave length ranges from ', num2str(2*pi/L(end)), 'm', 'to', num2str(2*pi/L(1)), 'm'))
-% wave length ranges from39.6442mto396.4422m
-
+disp(strcat('x: wave length ranges from ', num2str(2*pi/K(end)), 'm', 'to', num2str(2*pi/10.^(k(1))), 'to inf'))
+disp(strcat('y: wave length ranges from ', num2str(2*pi/L(end)), 'm', 'to', num2str(2*pi/L(1)), 'm'))
+% x: wave length ranges from39.6442mto198.6918to inf
+% y: wave length ranges from39.6442mto628.3185m
 % (FD) background diffusion and dissipation
 nu=0;
 kap=0;
@@ -86,7 +89,7 @@ kap=0;
 % boundary condition
 % (1) velocity: 1=rigid (2nd order: w_{hat}=0; 4th order: w_{hat}=0, w_{hat}_z=0), 0=frictionless (2nd order: w_{hat}_z=kw_{hat}; 4th order: w_{hat}=0, w_{hat}_zz=0)
 % (2) buoyancy: 1=insulating (b_{hat}_z=0 suggesting -\kappa\frac{\pb}{\pz}=0), 0=fixed-buoyancy (b_{hat}=0)                             
-iBC1 = [1,0]; % at z=z(0)     
+iBC1 = [0,0]; % at z=z(0)     
 iBCN = iBC1;  % at z=z(N+1)
 
 % (FG) or vertical and horizontal eddy viscosity, vertical and horizontal eddy diffusivity
@@ -111,7 +114,10 @@ bs=8; % 10m or 16m? I'm not sure
 k_thred = 1; % 1- 2.*pi./7/(bs/2); 2- do not apply
 
 % perform 2nd scan
-scan2 = 2;
+scan2 = 1;
+
+% butterworth low-pass filter window
+fl_bw = 0;
 
 %% below is an example for the sorted two-yo profiles
 % load data
@@ -124,7 +130,10 @@ II=nan(length(s),1);  % no. of zero-crossings
 GR=nan(length(s),1);  % growth rate
 CR=nan(length(s),1);  % real phase speed
 CI=nan(length(s),1);  % imaginary phase speed
-CL=nan(length(s),30); % critical level
+CL=nan(length(s),1); % critical level
+ERR_K=nan(length(s),1); % error in perturbation kinetic energy
+ERR_B=nan(length(s),1); % error in perturbation buoyancy variance
+
 KFGM=nan(length(s),2);% wave number (k, l) for the FGM 
 botz=nan(length(s),1);% sea bottom depth (optional, data.hab required)
 zw=[-6000:dz:0]';
@@ -135,7 +144,11 @@ V=nan(length(zw),length(s));Vz=nan(length(zw),length(s));Vzz=nan(length(zw),leng
 B=nan(length(zw),length(s));N2=nan(length(zw),length(s));Ri=nan(length(zw),length(s));
 
 GR_all=nan(length(s),length(K),length(L));  
+CR_all=nan(length(s),length(K),length(L));  
 % W_all=nan(length(zw),length(s),length(K),length(L)); 
+CL_all=nan(length(s),length(K),length(L));  
+ERR_K_all=nan(length(s),length(K),length(L));  
+ERR_B_all=nan(length(s),length(K),length(L));  
 
 vdata = v; udata = u; zdata = z; 
 for profile=1:length(s)
@@ -150,8 +163,7 @@ for profile=1:length(s)
     D2=zo(profile)-botz(profile)+200;D1=0; %data from bottom to 200 m above the interface
 
     % scan the (k,l) plane once or twice to pick out FGM
-    [v,vz,vzz,b,n2,Ri_r,zz,II(profile),GR(profile),CR(profile),CI(profile),WFGM,KFGM(profile,:),CL_FGM,II0,GR0,CR0,CI0,W0]=FGM_towyo_ex1(data,dz,D1,D2,HOWTO,BOT,K,L,nu,kap,Av,Ah,Kv,Kh,iBC1,iBCN,k_thred,bs,tool,scan2);
-    CL(profile,1:length(CL_FGM))=CL_FGM;
+    [v,vz,vzz,b,n2,Ri_r,zz,II(profile),GR(profile),CR(profile),CI(profile),WFGM,KFGM(profile,:),CL(profile),ERR_K(profile),ERR_B(profile),II0,GR0,CR0,CI0,W0,CL0,ERR_K0,ERR_B0]=FGM_towyo(data,dz,D1,D2,HOWTO,BOT,K,L,nu,kap,Av,Ah,Kv,Kh,iBC1,iBCN,k_thred,bs,tool,scan2,fl_bw);
     W(:,profile)=interp1(zz,WFGM,zw);V(:,profile)=interp1(zz,v,zw);Vz(:,profile)=interp1(zz,vz,zw);Vzz(:,profile)=interp1(zz,vzz,zw);
     B(:,profile)=interp1(zz,b,zw);N2(:,profile)=interp1(zz,n2,zw);Ri(:,profile)=interp1(zz,Ri_r,zw);
 
@@ -159,24 +171,27 @@ for profile=1:length(s)
     if ~isnan(GR(profile))
         figure(profile)
         SI_pic_1(GR0,K,L,bs,v,CR0,CI0,II0,GR(profile),CR(profile),CI(profile),KFGM(profile,:))
-        print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex1_1_',num2str(profile))])
+        print('-djpeg',[mdirec strcat('codes_new/', filename(filenum).name(1:end-4), '_ex1_1_',num2str(profile))])
         % plot w
         figure(profile+50)
         [Ph]=SI_pic_2(WFGM,sqrt(KFGM(profile,1)^2+KFGM(profile,2)^2),zz,CL(profile,:));
-        print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex1_2_',num2str(profile))])
+        print('-djpeg',[mdirec strcat('codes_new/', filename(filenum).name(1:end-4), '_ex1_2_',num2str(profile))])
     end
     % plot profiles
     figure(profile+100)
     DP_pic(v,vz,vzz,b,n2,Ri_r,zz)
     set(gcf, 'PaperPosition',[0 0 8 4]);
-    print('-djpeg',[mdirec strcat('results/TG_SI_towyo/', filename(filenum).name(1:end-4), '_ex1_3_',num2str(profile))])
+    print('-djpeg',[mdirec strcat('codes_new/', filename(filenum).name(1:end-4), '_ex1_3_',num2str(profile))])
 
     close all
     
     GR_all(profile,:,:)=GR0;
-%     W_all(:,profile,:,:)=interp1(zz,W0,zw);
-    
+    CR_all(profile,:,:)=CR0;
+    CL_all(profile,:,:)=CL0;
+    ERR_K_all(profile,:,:)=ERR_K0;
+    ERR_B_all(profile,:,:)=ERR_B0;
+
 end
 LON = mlon; LAT = mlat;
-eval(strcat('save TG_SI_',  filename(filenum).name(1:end-4), '_ex1.mat II GR CR CI CL KFGM K L zw W V Vz Vzz B N2 Ri LON LAT botz GR_all'))
+eval(strcat('save TG_SI_',  filename(filenum).name(1:end-4), '_ex1.mat II GR CR CI CL KFGM K L zw W V Vz Vzz B N2 Ri LON LAT botz GR_all CR_all CL_all ERR_K_all ERR_B_all'))
 end
