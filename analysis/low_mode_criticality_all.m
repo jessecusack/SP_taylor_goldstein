@@ -1,25 +1,36 @@
 % The purpose of this analysis is to determine the phase speed of low mode
-% waves using a 1D taylor goldstein analysis. 
+% waves using a 1D taylor goldstein analysis. We use Bill Smyths FG method
+% code.
 
 % PARAMS
 % density of interface top
 sig4i = 1045.93;  % double check this matches the choice in other analysis.
+%sig4i_ = 1045.93;
 % Turbulent diffusivity (if constant)
-Kv0 = 1e-2;
+% Kv0 = 1e-2;
 % To smooth profiles or not? Maybe diffusivity takes care of this?
-dosmoothing = false;
+dosmoothing = true;
 % Smoothing amounts
-bspan = 0.1;
-vspan = 0.3;
+zlp = 10;  % low pass wavelength in m
+zd = 1;  % sampling wavelength in m
+Np = zlp/zd;  % number of data points per wavelength
+mlp = 1/zlp;  % filter wavenumber cpm
+ms = 1/zd;  % sampling wavenumber cpm
 % wavenumber for Taylor Goldstein
 L = 100000;
 k = 2*pi/L;
 % Compute all modes (imode=1 gives fastest-growing unstable mode)
 imode = 0;
+% Number of modes to save
+nmsave = 10;
 % Skip some data to increase speed
 step = 5;
 % Order of the derivative
 dorder = 3;
+% Mixing efficiency
+gamma = 0.2;
+% Max data required in a profile
+ndatamax = 10*step;
 % END PARAMS
 
 % LOAD DATA
@@ -30,23 +41,25 @@ v_ = ncread(data_file, "v");
 b_ = ncread(data_file, "b_sorted");
 z_ = ncread(data_file, "z");
 sig4_ = ncread(data_file, "sig4_sorted");
-lon = ncread(data_file, "lon");
-lat = ncread(data_file, "lat");
 pfl = ncread(data_file, "pfl");
+eps_ = ncread(data_file, "eps");
+N2_ref_ = ncread(data_file, "N2_ref");
 
 [npfl, ~] = size(pfl);
-cps = nan*ones(size(pfl));
-angles = nan*ones(size(pfl));
-% ues
-% wes
+cp_us = nan*ones(npfl, nmsave);  % upstream
+cp_ds = nan*ones(npfl, nmsave);  % downstream
+angles = nan*ones(npfl, 1);
 
 for idx = 1:npfl
-
+    disp(idx)
+    
     % clean up data and remove data above the interface
     u = u_(idx, :);
     v = v_(idx, :);
     sig4 = sig4_(idx, :);
     b = b_(idx, :);
+    eps = eps_(idx, :);
+    N2_ref = N2_ref_(idx, :);
 
     use = ~isnan(b) & ~isnan(u) & ~isnan(v) & (sig4 > sig4i);
 
@@ -55,68 +68,84 @@ for idx = 1:npfl
     v = v(use)';
     sig4 = sig4(use)';
     b = b(use)';
+    eps = eps(use)';
+    N2_ref = N2_ref(use)';
     z = z_(use);
     
-    if isempty(u)
+    [ndata, ~] = size(b);
+    if ndata < ndatamax
         continue
     end
     
-    if length(u) <= dorder
-        continue
-    end
+    % fill with background epsilon
+    eps(isnan(eps)) = 6e-11;
 
-    % cut out some data for speed
-    u = u(1:step:end);
-    v = v(1:step:end);
-    sig4 = sig4(1:step:end);
-    b = b(1:step:end);
-    z = z(1:step:end);
-
-    % rotate the velocity into the depth mean direction
-    dz = 1*step;  % this is the bin size of each data point.
-    U = sum(u*dz)/sum(dz*use);
-    V = sum(v*dz)/sum(dz*use);
+    U = sum(u*zd)/sum(zd*use);
+    V = sum(v*zd)/sum(zd*use);
     % need the - and 2*pi because atan2 returns values in the range [-pi, pi]
     % and we want [0, 2*pi]
     angle = -atan2(V, U) + 2*pi;
-    angles(idx) = angle;
     up = u*cos(angle) - v*sin(angle);
     vp = u*sin(angle) + v*cos(angle);
+    angles(idx) = angle;
     % after doing the above, up should contain all the depth mean velocity.
-
-    %%%%%%% Taylor Goldstein analysis in the U direction
 
     Mdiff = BaryL(z, 1, dorder);  % This is the differentiation matrix.
 
     % Smooth data
     if dosmoothing
-        us = smooth(z, up, vspan, 'rloess');
-        bs = smooth(z, b, bspan, 'rloess');
+        us = lowpass(up, mlp, ms, 'ImpulseResponse', 'iir');
+        bs = lowpass(b, mlp, ms, 'ImpulseResponse', 'iir');
+        sig4s = lowpass(sig4, mlp, ms, 'ImpulseResponse', 'iir');
         bz = Mdiff*bs;
+        zs = z;
+        % Filter ringing at ends means we should cut off ends.
+    %     us = us(1 + Np/2:end - Np/2);
+    %     bs = bs(1 + Np/2:end - Np/2);
+    %     sig4s = sig4s(1 + Np/2:end - Np/2);
+    %     bz = bz(1 + Np/2:end - Np/2);
+    %     zs = zs(1 + Np/2:end - Np/2);
+
     else
         us = up;
         bs = b;
+        sig4s = sig4;
         bz = Mdiff*bs;
-    end
+        zs = z;
 
+    end
+    
     % Diffusivity profile
-    % kv = gamma*eps./bzs.^2;
-    [nz, ~] = size(bs);
-    Kv = Kv0*ones(nz, 1);
-    Kh = Kv;
-    Av = Kv;
-    Ah = Kv;
+    Kvs = gamma*eps./N2_ref;
+%     Kv = Kv0*ones(size(b));
+%     Kv(sig4 < sig4i_) = 1e-4;
+
+    % cut out some data for speed
+    us = us(1:step:end);
+    % v = v(1:step:end);
+    sig4s = sig4s(1:step:end);
+    bs = bs(1:step:end);
+    bz = bz(1:step:end);
+    zs = zs(1:step:end);
+    Kvs = Kvs(1:step:end);
+    N2_refs = N2_ref(1:step:end);
+    epss = eps(1:step:end);
+
+    % Other diffusivity/viscosity params
+    Khs = Kvs;
+    Avs = Kvs;
+    Ahs = Kvs;
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Use Fourier-Galerkin method to compute growth rates & eigfns
     % Compute Fourier integrals in advance
-    FG = vTG_FGprep(z, us, 0*us, bz, Av, Ah, Kv, Kh); 
+    FG = vTG_FGprep(zs, us, 0*us, N2_refs, Avs, Ahs, Kvs, Khs); 
     % Compute growth rates & eigfns
-    [om, we, be] = vTG_FG(z, us, 0*us, Av, Ah, k, 0, imode, FG);
+    [om, we, be] = vTG_FG(zs, us, 0*us, Avs, Ahs, k, 0, imode, FG);
     % read above as returning
     % [frequency, w eigenvector, b eigenvector]
 
-    % phase speed (I don't understand why this minus is there)
+    % phase speed
     cp = -imag(om)/k;
     % sort by phase speed
     [cp, ind] = sort(cp,'ascend');
@@ -124,11 +153,24 @@ for idx = 1:npfl
     be = be(:, ind);
     om = om(ind);
     % horizontal velocity eigenfunction
-    ue = (1i/k)*Mdiff*we;
+    ue = (1i/k)*BaryL(zs, 1, dorder)*we;
     
-    cps(idx) = cp(1);
+    cp_us(idx, :) = cp(1:nmsave);
+    cp_ds(idx, :) = cp(end-nmsave+1:end);
+    
+    fname = sprintf('FGTG_p%04d.mat', idx);
+    info = ["cp: phase speed", "we: w eigenvectors", "be: b eigenvectors", ...
+        "om: frequency", "ue: u eigenvectors", "sig4i: interface density", ...
+        "dosmoothing: true if smoothed", "zlp: low pass wavelength", "k: wavevector", ...
+        "step: step for coarsening data", "us: velocity profile", "bs: buoyancy profile", ...
+        "bz: gradient of buoyancy" "sig4s: density profile", "Kvs: diffusivity profile", ...
+        "zs: depth", "idx: profile number in stacked towyos file", "epss: TKE dissipation", ...
+        "N2_refs: buoyancy frequency squared adiabatically levelled"];
+    save(strcat("../proc_data/", fname), "info", "cp", "we", "be", "om", ...
+        "ue", "sig4i", "dosmoothing", "zlp", "k", "step", "us", "bs", "bz", ...
+        "sig4s", "Kvs", "zs", "idx", "epss", "N2_refs")
 
 end
 
-save("../proc_data/TG_phase_speed.mat", "cps", "angles")
+save("../proc_data/TG_phase_speed.mat", "cp_us", "cp_ds", "angles", "k")
 
