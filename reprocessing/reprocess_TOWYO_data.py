@@ -37,7 +37,7 @@ sig4b = 1045.9  # The potential density used in the buoyancy estimate
 sig4max = 1045.93
 dc = 50  # step size for estimating distances
 serr = 34.65  # Lowest salinity that we do not classify as an error
-bin_width = 20  # adiabatic levelling method bin width in metres 
+bin_width = 100  # adiabatic levelling method bin width in metres 
 
 iP5 = 0
 iP2 = 0
