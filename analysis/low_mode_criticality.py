@@ -62,11 +62,13 @@ ax.legend()
 # Map of phase speeds
 
 # %%
+cp0 = 0.02
+
 fig, ax = plt.subplots(figsize=(8, 8))
 ax.set_aspect("equal")
 ax.contour(bathyP5.lon, bathyP5.lat, bathyP5.z, colors="k")
 CS = ax.scatter(ds.lon, ds.lat, c=cp_us[:, 0], vmin=-0.3, vmax=0.3, cmap="coolwarm")
-ax.plot(ds.lon[cp_us[:, 0] > -0.05], ds.lat[cp_us[:, 0] > -0.05], 'r.')
+ax.plot(ds.lon[cp_us[:, 0] > cp0], ds.lat[cp_us[:, 0] > cp0], 'r.')
 cb = plt.colorbar(CS)
 cb.set_label("Mode 1 Phase speed")
 
@@ -74,7 +76,7 @@ fig, ax = plt.subplots(figsize=(8, 8))
 ax.set_aspect("equal")
 ax.contour(bathyP5.lon, bathyP5.lat, bathyP5.z, colors="k")
 CS = ax.scatter(ds.lon, ds.lat, c=cp_us[:, 1], vmin=-0.3, vmax=0.3, cmap="coolwarm")
-ax.plot(ds.lon[cp_us[:, 1] > -0.05], ds.lat[cp_us[:, 1] > -0.05], 'r.')
+ax.plot(ds.lon[cp_us[:, 1] > cp0], ds.lat[cp_us[:, 1] > cp0], 'r.')
 cb = plt.colorbar(CS)
 cb.set_label("Mode 2 Phase speed")
 
@@ -82,7 +84,7 @@ fig, ax = plt.subplots(figsize=(8, 8))
 ax.set_aspect("equal")
 ax.contour(bathyP5.lon, bathyP5.lat, bathyP5.z, colors="k")
 CS = ax.scatter(ds.lon, ds.lat, c=cp_us[:, 2], vmin=-0.3, vmax=0.3, cmap="coolwarm")
-ax.plot(ds.lon[cp_us[:, 2] > -0.05], ds.lat[cp_us[:, 2] > -0.05], 'r.')
+ax.plot(ds.lon[cp_us[:, 2] > cp0], ds.lat[cp_us[:, 2] > cp0], 'r.')
 cb = plt.colorbar(CS)
 cb.set_label("Mode 3 Phase speed")
 

@@ -167,7 +167,9 @@ frac = (h/n).T
 frac[n.T < 10] = np.nan
 
 C = ax.pcolormesh(binlon, binlat, frac, alpha=0.5)
-plt.colorbar(C)
+cb = plt.colorbar(C)
+
+cb.set_label("Fraction of profiles with $L_T > 50$ m")
 
 
 # %%

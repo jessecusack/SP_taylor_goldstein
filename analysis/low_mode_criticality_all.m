@@ -18,11 +18,12 @@ mlp = 1/zlp;  % filter wavenumber cpm
 ms = 1/zd;  % sampling wavenumber cpm
 % wavenumber for Taylor Goldstein
 L = 100000;
-k = 2*pi/L;
+k = 0; %2*pi/L;
+l = 2*pi/L;
 % Compute all modes (imode=1 gives fastest-growing unstable mode)
 imode = 0;
 % Number of modes to save
-nmsave = 10;
+nmsave = 4;
 % Skip some data to increase speed
 step = 5;
 % Order of the derivative
@@ -31,6 +32,8 @@ dorder = 3;
 gamma = 0.2;
 % Max data required in a profile
 ndatamax = 10*step;
+% do rotation?
+rotate = false;
 % END PARAMS
 
 % LOAD DATA
@@ -80,15 +83,21 @@ for idx = 1:npfl
     % fill with background epsilon
     eps(isnan(eps)) = 6e-11;
 
-    U = sum(u*zd)/sum(zd*use);
-    V = sum(v*zd)/sum(zd*use);
-    % need the - and 2*pi because atan2 returns values in the range [-pi, pi]
-    % and we want [0, 2*pi]
-    angle = -atan2(V, U) + 2*pi;
-    up = u*cos(angle) - v*sin(angle);
-    vp = u*sin(angle) + v*cos(angle);
-    angles(idx) = angle;
-    % after doing the above, up should contain all the depth mean velocity.
+    if rotate
+        U = sum(u*zd)/sum(zd*use);
+        V = sum(v*zd)/sum(zd*use);
+        % need the - and 2*pi because atan2 returns values in the range [-pi, pi]
+        % and we want [0, 2*pi]
+        angle = -atan2(V, U) + 2*pi;
+        up = u*cos(angle) - v*sin(angle);
+        vp = u*sin(angle) + v*cos(angle);
+        angles(idx) = angle;
+        % after doing the above, up should contain all the depth mean velocity.
+    else
+        up = u;
+        vp = v;
+        angles(idx) = 0;
+    end
 
     Mdiff = BaryL(z, 1, dorder);  % This is the differentiation matrix.
 
@@ -141,36 +150,37 @@ for idx = 1:npfl
     % Compute Fourier integrals in advance
     FG = vTG_FGprep(zs, us, 0*us, N2_refs, Avs, Ahs, Kvs, Khs); 
     % Compute growth rates & eigfns
-    [om, we, be] = vTG_FG(zs, us, 0*us, Avs, Ahs, k, 0, imode, FG);
+    [om, we, be] = vTG_FG(zs, us, 0*us, Avs, Ahs, k, l, imode, FG);
     % read above as returning
     % [frequency, w eigenvector, b eigenvector]
 
     % phase speed
-    cp = -imag(om)/k;
+    cpk = -imag(om)/k;
+    cpl = -imag(om)/l;
     % sort by phase speed
-    [cp, ind] = sort(cp,'ascend');
+    [cpk, ind] = sort(cpl, 'ascend');
     we = we(:, ind);
     be = be(:, ind);
     om = om(ind);
     % horizontal velocity eigenfunction
     ue = (1i/k)*BaryL(zs, 1, dorder)*we;
     
-    cp_us(idx, :) = cp(1:nmsave);
-    cp_ds(idx, :) = cp(end-nmsave+1:end);
+    cp_us(idx, :) = cpl(1:nmsave);
+    cp_ds(idx, :) = cpl(end-nmsave+1:end);
     
     fname = sprintf('FGTG_p%04d.mat', idx);
-    info = ["cp: phase speed", "we: w eigenvectors", "be: b eigenvectors", ...
+    info = ["cpk: phase speed in x", "cpl: phase speed in y" "we: w eigenvectors", "be: b eigenvectors", ...
         "om: frequency", "ue: u eigenvectors", "sig4i: interface density", ...
         "dosmoothing: true if smoothed", "zlp: low pass wavelength", "k: wavevector", ...
         "step: step for coarsening data", "us: velocity profile", "bs: buoyancy profile", ...
         "bz: gradient of buoyancy" "sig4s: density profile", "Kvs: diffusivity profile", ...
         "zs: depth", "idx: profile number in stacked towyos file", "epss: TKE dissipation", ...
         "N2_refs: buoyancy frequency squared adiabatically levelled"];
-    save(strcat("../proc_data/", fname), "info", "cp", "we", "be", "om", ...
+    save(strcat("../proc_data/", fname), "info", "cpk", "cpl", "we", "be", "om", ...
         "ue", "sig4i", "dosmoothing", "zlp", "k", "step", "us", "bs", "bz", ...
         "sig4s", "Kvs", "zs", "idx", "epss", "N2_refs")
 
 end
 
-save("../proc_data/TG_phase_speed.mat", "cp_us", "cp_ds", "angles", "k")
+save("../proc_data/TG_phase_speed.mat", "cp_us", "cp_ds", "angles", "k", "l")
 
