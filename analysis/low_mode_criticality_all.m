@@ -104,6 +104,7 @@ for idx = 1:npfl
     % Smooth data
     if dosmoothing
         us = lowpass(up, mlp, ms, 'ImpulseResponse', 'iir');
+        vs = lowpass(vp, mlp, ms, 'ImpulseResponse', 'iir');
         bs = lowpass(b, mlp, ms, 'ImpulseResponse', 'iir');
         sig4s = lowpass(sig4, mlp, ms, 'ImpulseResponse', 'iir');
         bz = Mdiff*bs;
@@ -117,6 +118,7 @@ for idx = 1:npfl
 
     else
         us = up;
+        vs = vp;
         bs = b;
         sig4s = sig4;
         bz = Mdiff*bs;
@@ -131,7 +133,7 @@ for idx = 1:npfl
 
     % cut out some data for speed
     us = us(1:step:end);
-    % v = v(1:step:end);
+    vs = vs(1:step:end);
     sig4s = sig4s(1:step:end);
     bs = bs(1:step:end);
     bz = bz(1:step:end);
@@ -148,9 +150,9 @@ for idx = 1:npfl
     %%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Use Fourier-Galerkin method to compute growth rates & eigfns
     % Compute Fourier integrals in advance
-    FG = vTG_FGprep(zs, us, 0*us, N2_refs, Avs, Ahs, Kvs, Khs); 
+    FG = vTG_FGprep(zs, us, vs, N2_refs, Avs, Ahs, Kvs, Khs); 
     % Compute growth rates & eigfns
-    [om, we, be] = vTG_FG(zs, us, 0*us, Avs, Ahs, k, l, imode, FG);
+    [om, we, be] = vTG_FG(zs, us, vs, Avs, Ahs, k, l, imode, FG);
     % read above as returning
     % [frequency, w eigenvector, b eigenvector]
 
