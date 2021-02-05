@@ -60,10 +60,10 @@ clc
 
 %% datapath & toolpath & etc. 
 % main directory (change to your directory)
-mdirec='/Users/tantanmeow/Desktop/WORK/2018-2019/Jesse/sp-tg/';
+mdirec='../';
 
 % data directory
-datadirec='/Users/tantanmeow/Desktop/WORK/2018-2019/Jesse/proc_data/';
+datadirec='/Users/Cusack/SP_taylor_goldstein/proc_data/';
 % add Matlab tools to path
 addpath(genpath(strcat(mdirec,'tools/')));
 
@@ -122,7 +122,7 @@ fl_bw = 100;
 %% below is an example for the sorted two-yo profiles
 % load data
 filename=dir(strcat(datadirec,'TY*'));
-for filenum=15:length(filename)
+for filenum=23:length(filename)
     load(strcat(datadirec,filename(filenum).name))
     s = mlon; %number of profiles
 
@@ -162,7 +162,12 @@ for profile=1:length(s)
     D2=zo(profile)-botz(profile)+200;D1=0; %data from bottom to 200 m above the interface
 
     % scan the (k,l) plane once or twice to pick out FGM
-    [v,vz,vzz,b,n2,Ri_r,zz,II(profile),GR(profile),CR(profile),CI(profile),WFGM,KFGM(profile,:),CL(profile),ERR_K(profile),ERR_B(profile),II0,GR0,CR0,CI0,W0,CL0,ERR_K0,ERR_B0]=FGM_towyo_ex4(data,dz,D1,D2,HOWTO,BOT,K,L,nu,kap,Av,Ah,Kv,Kh,iBC1,iBCN,k_thred,bs,tool,scan2,fl_bw);
+    try 
+        [v,vz,vzz,b,n2,Ri_r,zz,II(profile),GR(profile),CR(profile),CI(profile),WFGM,KFGM(profile,:),CL(profile),ERR_K(profile),ERR_B(profile),II0,GR0,CR0,CI0,W0,CL0,ERR_K0,ERR_B0]=FGM_towyo_ex4(data,dz,D1,D2,HOWTO,BOT,K,L,nu,kap,Av,Ah,Kv,Kh,iBC1,iBCN,k_thred,bs,tool,scan2,fl_bw);
+    catch ME
+        fprintf('Error in FGM: %s\n', ME.message)
+        continue;
+    end
     W(:,profile)=interp1(zz,WFGM,zw);V(:,profile)=interp1(zz,v,zw);Vz(:,profile)=interp1(zz,vz,zw);Vzz(:,profile)=interp1(zz,vzz,zw);
     B(:,profile)=interp1(zz,b,zw);N2(:,profile)=interp1(zz,n2,zw);Ri(:,profile)=interp1(zz,Ri_r,zw);
 
