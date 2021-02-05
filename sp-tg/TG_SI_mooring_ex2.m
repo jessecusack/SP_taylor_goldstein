@@ -193,7 +193,7 @@ for profile=1:length(s)
     data.v=vdata(find(~isnan(vdata(:,profile))),profile);data.u=udata(find(~isnan(vdata(:,profile))),profile);data.z=zdata(find(~isnan(vdata(:,profile))),profile);
     data.sigma4=sig4(find(~isnan(vdata(:,profile))),profile); %use UN-SORTED profiles 
     data.b=buoyancy(find(~isnan(vdata(:,profile))),profile); 
-    if ~isempty(data.v)
+    if ~isempty(data.v) && data.z(1)-data.z(end)>10*dz
         data.hab=HAB(find(zdata(:,profile)==data.z(end)),profile);
         hab(profile)=data.hab;
         if isfield(data, 'hab')
