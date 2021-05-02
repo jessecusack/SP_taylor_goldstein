@@ -151,7 +151,7 @@ for idx = 1:npfl
         % [frequency, w eigenvector, b eigenvector]
 
         % phase speed
-        cp = -om/kh;
+        cp = -imag(om)/kh;
         % sort by phase speed
         [cp, ind] = sort(cp, 'ascend');
         we = we(:, ind);
