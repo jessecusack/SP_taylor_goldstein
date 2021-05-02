@@ -44,11 +44,12 @@ BV=(b.*conj(b))/2;
 LH_B=( diag(real(sig))*BV' )';
 
 BVP=-diag(Bz)*real(conj(b).*w)/2;
-chi=kap*abs(bz).^2/2+kap*k*abs(b).^2/2;
+chi=kap.*abs(bz).^2./2+kap.*k.*abs(b).^2./2;
 
-BVF=-kap*real(bz.*conj(b))/2;
+BVF=-kap.*real(bz.*conj(b))./2;
 cBVF=ddz(z)*BVF;
 RH_B=BVP+cBVF-chi;
-err_B= mean(abs(RH_B-LH_B))./( mean(abs(RH_B).^2)+mean(abs(LH_B).^2) ).^.5;
+% err_B= mean(abs(RH_B-LH_B))./( mean(abs(RH_B).^2)+mean(abs(LH_B).^2) ).^.5;
+err_B=(mean(abs((RH_B-LH_B)).^2)).^.5./( mean(abs(RH_B).^2)+mean(abs(LH_B).^2) ).^.5;
 
 return

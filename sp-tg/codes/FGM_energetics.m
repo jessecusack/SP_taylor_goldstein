@@ -1,4 +1,4 @@
-function [u,p,K,SP,EF,cEF,BF,EFn,cEFn,eps,RH,LH,err]=FGM_energetics(z,U,k,l,nu,sig,w,b)
+function [u,p,K,SP,EF,cEF,BF,EFn,cEFn,eps,RH,LH,err]=FGM_energetics(z,U,k,nu,sig,w,b)
 
 % INPUTS:
 % z = vertical coordinate vector (evenly spaced)
@@ -72,6 +72,7 @@ for j=1:length(sig)
     LH(:,j)=2.*(real(sig(j)).*K(:,j));
 end
 RH=SP+BF+cEF+cEFn-eps;
-err=abs(mean(RH-LH))./( mean(abs(RH).^2)+mean(abs(LH).^2) ).^.5;
+% err=abs(mean(RH-LH))./( mean(abs(RH).^2)+mean(abs(LH).^2) ).^.5;
+err=(mean(abs((RH-LH)).^2)).^.5./( mean(abs(RH).^2)+mean(abs(LH).^2) ).^.5;
 
 return

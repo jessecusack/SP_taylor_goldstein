@@ -3,7 +3,7 @@
 % data: a Matlab structure that must contain fileds v, sigma4, z (optional: u, hab)
 % dz: processed data grids
 % D1, D2: only keep data above bottom D1 meters to D2 meters (e.g., D2=1500;D1=0; )
-% K, L: wave numbers in x and y directions
+% K, L: wave number and direction of the wave vector
 % HOWTO: 1- linear interp; 2-segment mean
 % BOT: data profile starts from 1-DEEPEST DATA POINT 2- REAL SEA BOTTOM
 %
@@ -23,7 +23,7 @@
 % DP_2.m: artifically exclude overturns, BBLs 
 % DP_3.m: fill upper layer flow reversals with stagnant and uniform fluid
 % S.Tan, IOCAS, 2020/09/17
-function [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz,D1,D2,K,L,HOWTO,BOT)
+function [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz,D1,D2,theta,HOWTO,BOT)
     
     v=data.v;sigma4=data.sigma4;z=data.z;b=nan(size(sigma4));
     if isfield(data, 'hab')
@@ -140,7 +140,8 @@ function [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz,D1,D2,K,L,HOWTO,BOT)
 
     % roated speed
     if isfield(data, 'u')
-        spd=(K.*u+L.*v)./sqrt(K.^2+L.^2);
+        spd = u.*cos(pi*theta/180) + v.*sin(pi*theta/180);
+%         spd=(K.*u+L.*v)./sqrt(K.^2+L.^2);
     else
         spd=v;
     end
@@ -156,3 +157,4 @@ function [v,vz,vzz,b,n2,Ri,zz]=DP(data,dz,D1,D2,K,L,HOWTO,BOT)
     v=spd;
     
 end
+
