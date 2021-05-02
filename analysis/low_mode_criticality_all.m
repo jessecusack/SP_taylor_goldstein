@@ -16,10 +16,10 @@ zd = 1;  % sampling wavelength in m
 Np = zlp/zd;  % number of data points per wavelength
 mlp = 1/zlp;  % filter wavenumber cpm
 ms = 1/zd;  % sampling wavenumber cpm
-% wavenumber for Taylor Goldstein
-% L = 100000;
-k = 1e-10; %2*pi/L;
-l = 1e-6;
+% horizontal wavenumber and range of angles for Taylor Goldstein
+kh = 1e-8;
+dang = pi/6;
+angles = 0:dang:pi-dang;
 % Compute all modes (imode=1 gives fastest-growing unstable mode)
 imode = 0;
 % Number of modes to save
@@ -32,8 +32,6 @@ dorder = 3;
 gamma = 0.2;
 % Max data required in a profile
 ndatamax = 10*step;
-% do rotation?
-rotate = false;
 % END PARAMS
 
 % LOAD DATA
@@ -49,12 +47,11 @@ eps_ = ncread(data_file, "eps");
 N2_ref_ = ncread(data_file, "N2_ref");
 
 [npfl, ~] = size(pfl);
-cp_us = nan*ones(npfl, nmsave);  % upstream
-cp_ds = nan*ones(npfl, nmsave);  % downstream
-angles = nan*ones(npfl, 1);
+
+cp_us = nan*ones(npfl, nmsave, length(angles));  % upstream
+cp_ds = nan*ones(npfl, nmsave, length(angles));  % downstream
 
 for idx = 1:npfl
-    disp(idx)
     
     % clean up data and remove data above the interface
     u = u_(idx, :);
@@ -83,21 +80,9 @@ for idx = 1:npfl
     % fill with background epsilon
     eps(isnan(eps)) = 6e-11;
 
-    if rotate
-        U = sum(u*zd)/sum(zd*use);
-        V = sum(v*zd)/sum(zd*use);
-        % need the - and 2*pi because atan2 returns values in the range [-pi, pi]
-        % and we want [0, 2*pi]
-        ang = -atan2(V, U) + 2*pi;
-        up = u*cos(ang) - v*sin(ang);
-        vp = u*sin(ang) + v*cos(ang);
-        angles(idx) = ang;
-        % after doing the above, up should contain all the depth mean velocity.
-    else
-        up = u;
-        vp = v;
-        angles(idx) = atan2(l, k);
-    end
+    % legacy from old rotate code
+    up = u;
+    vp = v;
 
     Mdiff = BaryL(z, 1, dorder);  % This is the differentiation matrix.
 
@@ -145,44 +130,55 @@ for idx = 1:npfl
     Khs = Kvs;
     Avs = Kvs;
     Ahs = Kvs;
-
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Use Fourier-Galerkin method to compute growth rates & eigfns
-    % Compute Fourier integrals in advance
-    FG = vTG_FGprep(zs, us, vs, N2_refs, Avs, Ahs, Kvs, Khs); 
-    % Compute growth rates & eigfns
-    [om, we, be] = vTG_FG(zs, us, vs, Avs, Ahs, k, l, imode, FG);
-    % read above as returning
-    % [frequency, w eigenvector, b eigenvector]
-
-    % phase speed
-    cpk = -imag(om)/k;
-    cpl = -imag(om)/l;
-    cp = cos(angles(idx))*cpk + sin(angles(idx))*cpl;
-    % sort by phase speed
-    [cp, ind] = sort(cp, 'ascend');
-    we = we(:, ind);
-    be = be(:, ind);
-    om = om(ind);
-    % horizontal velocity eigenfunction
-    ue = (1i/k)*BaryL(zs, 1, dorder)*we;
     
-    cp_us(idx, :) = cp(1:nmsave);
-    cp_ds(idx, :) = cp(end-nmsave+1:end);
-    
-    fname = sprintf('FGTG_p%04d.mat', idx);
-    info = ["cp: phase speed", "cpk: phase speed in x", "cpl: phase speed in y" "we: w eigenvectors", "be: b eigenvectors", ...
-        "om: frequency", "ue: u eigenvectors", "sig4i: interface density", ...
-        "dosmoothing: true if smoothed", "zlp: low pass wavelength", "k: x wavevector", "l: y wavevector", ...
-        "step: step for coarsening data", "us: velocity profile", "bs: buoyancy profile", ...
-        "bz: gradient of buoyancy" "sig4s: density profile", "Kvs: diffusivity profile", ...
-        "zs: depth", "idx: profile number in stacked towyos file", "epss: TKE dissipation", ...
-        "N2_refs: buoyancy frequency squared adiabatically levelled"];
-    save(strcat("../proc_data/", fname), "info", "cp", "cpk", "cpl", "we", "be", "om", ...
-        "ue", "sig4i", "dosmoothing", "zlp", "k", "l", "step", "us", "bs", "bz", ...
-        "sig4s", "Kvs", "zs", "idx", "epss", "N2_refs")
+    for iang = 1:length(angles)
+        
+        ang = angles(iang);
+        
+        k = kh*cos(ang);
+        l = kh*sin(ang);
 
+        message = sprintf('Index = %d, angle = %1.1f k = %e, l = %e', idx, rad2deg(ang), k, l);
+        disp(message)
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Use Fourier-Galerkin method to compute growth rates & eigfns
+        % Compute Fourier integrals in advance
+        FG = vTG_FGprep(zs, us, vs, N2_refs, Avs, Ahs, Kvs, Khs); 
+        % Compute growth rates & eigfns
+        [om, we, be] = vTG_FG(zs, us, vs, Avs, Ahs, k, l, imode, FG);
+        % read above as returning
+        % [frequency, w eigenvector, b eigenvector]
+
+        % phase speed
+        cp = -om/kh;
+        % sort by phase speed
+        [cp, ind] = sort(cp, 'ascend');
+        we = we(:, ind);
+        be = be(:, ind);
+        om = om(ind);
+        % horizontal velocity eigenfunction
+        ue = (1i/kh)*BaryL(zs, 1, dorder)*we;
+
+        cp_us(idx, :, iang) = cp(1:nmsave);
+        cp_ds(idx, :, iang) = cp(end-nmsave+1:end);
+
+        fname = sprintf('FGTG_p%04d_a%03d.mat', idx, int16(rad2deg(ang)));
+        disp("Saving " + fname)
+        info = ["cp: phase speed", "we: w eigenvectors", "be: b eigenvectors", ...
+            "om: frequency", "ue: u eigenvectors", "sig4i: interface density", ...
+            "dosmoothing: true if smoothed", "zlp: low pass wavelength", "k: x wavevector", "l: y wavevector", ...
+            "step: step for coarsening data", "us: velocity profile", "bs: buoyancy profile", ...
+            "bz: gradient of buoyancy" "sig4s: density profile", "Kvs: diffusivity profile", ...
+            "zs: depth", "idx: profile number in stacked towyos file", "epss: TKE dissipation", ...
+            "N2_refs: buoyancy frequency squared adiabatically levelled"];
+        save(strcat("../proc_data/", fname), "info", "cp", "we", "be", "om", ...
+            "ue", "sig4i", "dosmoothing", "zlp", "k", "l", "step", "us", "bs", "bz", ...
+            "sig4s", "Kvs", "zs", "idx", "epss", "N2_refs")
+
+    end
+    
 end
 
-save("../proc_data/TG_phase_speed.mat", "cp_us", "cp_ds", "angles", "k", "l")
+save("../proc_data/TG_phase_speed.mat", "cp_us", "cp_ds", "angles", "kh")
 
