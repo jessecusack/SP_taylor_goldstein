@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.6.0
+#       jupytext_version: 1.11.2
 #   kernelspec:
 #     display_name: sp-tg
 #     language: python
@@ -50,6 +50,7 @@ OI = xr.open_dataset("../raw_data/non_divergent_OI_fields.nc")
 
 # TG long wave analysis
 dm = utils.loadmat("../proc_data/TG_phase_speed.mat")
+kh = dm["kh"]
 angles = dm["angles"]
 cp_us = dm["cp_us"]
 cp_ds = dm["cp_ds"]
@@ -93,11 +94,18 @@ U = np.sqrt(uo**2 + vo**2)
 # Froude number
 Fr = U/np.sqrt(gp*H)
 
+# %% [markdown]
+# Plot for paper
+
 # %%
+mn = 1  # mode number to plot
+iang = 0
+ang = angles[iang]
 l = 4000
 SNR = 2
 dc = 100  # Threshold thickness
-step = 3
+step = 40
+stepFr = 5
 inside_hull = (OI.PSIerr.sel(l=l, SNR=SNR) < 0.2) #& (ds.d > dc)
 vmin = 4500.0
 vmax = 5500.0
@@ -110,9 +118,9 @@ PSIm = OI.PSI.sel(l=l, SNR=SNR).where(inside_hull)
 Um = OI.U.sel(l=l, SNR=SNR).where(inside_hull)
 Vm = OI.V.sel(l=l, SNR=SNR).where(inside_hull)
 
-fig, axs = plt.subplots(1, 2, figsize=(6.5, 4), sharex=True, sharey=True)
-axs[0].set_aspect("equal")
-axs[1].set_aspect("equal")
+fig, ax = plt.subplots(1, 1, figsize=(3.125, 4))#, sharex=True, sharey=True)
+ax.set_aspect("equal")
+# axs[1].set_aspect("equal")
 
 # Bathymetry for sill P5
 wlon, elon, slat, nlat = -168.77, -168.5, -8.3, -7.95
@@ -122,49 +130,58 @@ j1, j2 = np.searchsorted(B["lat"], [slat, nlat])
 x0 = B.xg[j1, i1]
 y0 = B.yg[j1, i1]
 
-for ax in axs:
-    CB = ax.contourf(
-        1e-3*(B.xg[j1:j2, i1:i2] - x0),
-        1e-3*(B.yg[j1:j2, i1:i2] - y0),
-        B.merged[j1:j2, i1:i2],
-        np.arange(vmin, vmax + dv, dv),
-        cmap=bcmap,
-        extend="both",
-    )
-    ax.contour(
-        1e-3*(B.xg[j1:j2, i1:i2] - x0),
-        1e-3*(B.yg[j1:j2, i1:i2] - y0),
-        B.merged[j1:j2, i1:i2],
-        np.arange(vmin, vmax + dv, dv),
-        colors=ccolors,
-        linewidths=0.5,
-        linestyles="solid",
-    )
+CB = ax.contourf(
+    1e-3*(B.xg[j1:j2, i1:i2] - x0),
+    1e-3*(B.yg[j1:j2, i1:i2] - y0),
+    B.merged[j1:j2, i1:i2],
+    np.arange(vmin, vmax + dv, dv),
+    cmap=bcmap,
+    extend="both",
+)
+ax.contour(
+    1e-3*(B.xg[j1:j2, i1:i2] - x0),
+    1e-3*(B.yg[j1:j2, i1:i2] - y0),
+    B.merged[j1:j2, i1:i2],
+    np.arange(vmin, vmax + dv, dv),
+    colors=ccolors,
+    linewidths=0.5,
+    linestyles="solid",
+)
 
-    ax.contour(1e-3*(OI.x - x0), 1e-3*(OI.y - y0), PSIm, np.arange(OI.PSI.min(), OI.PSI.max(), 3e5), colors="black", linewidths=1)
+ax.contour(1e-3*(OI.x - x0), 1e-3*(OI.y - y0), PSIm, np.arange(OI.PSI.min(), OI.PSI.max(), 3e5), colors="black", linewidths=1)
 
 
 # ax.contour(bathyP5.lon, bathyP5.lat, bathyP5.z, colors="k")
 
-CS = axs[1].scatter(1e-3*(ds.x[::step] - x0), 1e-3*(ds.y[::step] - y0), c=Fr[::step], vmax=1.)
-axs[1].plot(1e-3*(ds.x[::step] - x0)[Fr[::step] > 1], 1e-3*(ds.y[::step] - y0)[Fr[::step] > 1], 'r.', ms=2)
-# # CS = axs[1].scatter(ds.lon, ds.lat, c=Fr)
-# cb = plt.colorbar(CS)
-# cb.set_label("Froude number")
+# CS = ax.scatter(1e-3*(ds.x[::step] - x0), 1e-3*(ds.y[::step] - y0), c=Fr[::step], vmax=1.)
+# ax.plot(1e-3*(ds.x[::step] - x0)[Fr[::step] > 1], 1e-3*(ds.y[::step] - y0)[Fr[::step] > 1], 'r.', ms=2)
+# # CS = ax.scatter(ds.lon, ds.lat, c=Fr)
 
-mn = 0
-cpux = -cp_us*np.sin(angles)[:, np.newaxis]
-cpuy = -cp_us*np.cos(angles)[:, np.newaxis]
-cpdx = -cp_ds*np.sin(angles)[:, np.newaxis]
-cpdy = -cp_ds*np.cos(angles)[:, np.newaxis]
 
-# supercrit = cp_us[::step, mn] > 0
+
+CS = ax.scatter(1e-3*(ds.x[::stepFr] - x0), 1e-3*(ds.y[::stepFr] - y0), c=Fr[::stepFr], vmin=0, vmax=2, cmap="coolwarm")
+cb = plt.colorbar(CS)
+cb.set_label("Froude number")
+
+# supercrit = cp_us[::step, mn-1] > 0
 s0 = 3
-axs[0].quiver(1e-3*(ds.x[s0::step] - x0), 1e-3*(ds.y[s0::step] - y0), cpux[s0::step, mn], cpuy[s0::step, mn], cp_us[s0::step, mn], scale=1, cmap="coolwarm", width=0.01)
-# axs[0].quiver(1e-3*(ds.x[::step] - x0), 1e-3*(ds.y[::step] - y0), cpdx[::step, mn], cpdy[::step, mn], color='g', scale=1)
+for iang in range(6):
+    ang = angles[iang]
+    cpux = cp_us[:, mn - 1, iang]*np.cos(ang)
+    cpuy = cp_us[:, mn - 1, iang]*np.sin(ang)
+    cpdx = cp_ds[:, mn - 1, iang]*np.cos(ang)
+    cpdy = cp_ds[:, mn - 1, iang]*np.sin(ang)
+    ax.quiver(1e-3*(ds.x[s0::step] - x0), 1e-3*(ds.y[s0::step] - y0), cpux[s0::step], cpuy[s0::step], 
+                  color="yellow", scale=3, width=0.005, alpha=0.7)
+    ax.quiver(1e-3*(ds.x[s0::step] - x0), 1e-3*(ds.y[s0::step] - y0), cpdx[s0::step], cpdy[s0::step], 
+                  color="yellow", scale=3, width=0.005, alpha=0.7)
+    
+    
+ax.set_xlim()
 
-name = "criticality"
-fig.savefig(os.path.join(fig_dir, name + ".png"), dpi=300, bbox_inches="tight", pad_inches=0)
-fig.savefig(os.path.join(fig_dir, name + ".pdf"), dpi=300, bbox_inches="tight", pad_inches=0)
+
+# name = "criticality"
+# fig.savefig(os.path.join(fig_dir, name + ".png"), dpi=300, bbox_inches="tight", pad_inches=0)
+# fig.savefig(os.path.join(fig_dir, name + ".pdf"), dpi=300, bbox_inches="tight", pad_inches=0)
 
 # %%
